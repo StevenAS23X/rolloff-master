@@ -5,7 +5,7 @@ export function dumpsterStatusPercentages(
   now: Date = new Date()
 ): Record<DumpsterStatus, number> {
   const totals: Record<DumpsterStatus, number> = { idle: 0, "in-service": 0, "out-of-service": 0 };
-  const history = dumpster.status_history;
+  const history = dumpster.status_history ?? [];
   if (history.length === 0) return totals;
 
   for (let i = 0; i < history.length; i++) {
