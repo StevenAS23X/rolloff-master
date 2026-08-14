@@ -1,10 +1,15 @@
-import { Customer, Dumpster, Site, Ticket } from "./types";
+import { Account, Customer, Dumpster, Site, Ticket } from "./types";
 
 function daysAgoISO(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString().slice(0, 10);
 }
+
+export const seedAccounts: Account[] = [
+  { id: "acct-robert", name: "Robert", role: "admin" },
+  { id: "acct-ava", name: "Ava", role: "dispatch" },
+];
 
 export const seedCustomers: Customer[] = [
   {
@@ -75,12 +80,12 @@ export const seedDumpsters: Dumpster[] = [
   { id: "1002", size_yards: "10", status: "idle" },
   { id: "1015", size_yards: "20", status: "in-service" },
   { id: "1016", size_yards: "20", status: "in-service" },
-  { id: "1020", size_yards: "20", status: "in-service" },
+  { id: "1020", size_yards: "20", status: "idle" },
   { id: "1033", size_yards: "30", status: "idle" },
   { id: "1034", size_yards: "30", status: "in-service" },
   { id: "1040", size_yards: "40", status: "idle" },
   { id: "1041", size_yards: "40", status: "idle" },
-  { id: "1050", size_yards: "15", status: "idle" },
+  { id: "1050", size_yards: "15", status: "in-service" },
 ];
 
 export const seedTickets: Ticket[] = [

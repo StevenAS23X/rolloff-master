@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useStore } from "@/lib/store";
+import { useStore, useCurrentAccount } from "@/lib/store";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", adminOnly: false },
   { href: "/tickets", label: "Tickets", adminOnly: false },
+  { href: "/dumpsters", label: "Dumpsters", adminOnly: false },
   { href: "/admin", label: "Admin", adminOnly: true },
 ];
 
 export function Nav() {
   const pathname = usePathname();
-  const role = useStore((s) => s.role);
-  const setRole = useStore((s) => s.setRole);
+  const accounts = useStore((s) => s.accounts);
+  const login = useStore((s) => s.login);
+  const logout = useStore((s) => s.logout);
+  const account = useCurrentAccount();
 
-  const links = LINKS.filter((l) => !l.adminOnly || role === "admin");
+  const links = LINKS.filter((l) => !l.adminOnly || account?.role === "admin");
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -44,17 +47,21 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-500" htmlFor="role-select">
-            Role
+          <label className="text-xs font-medium text-slate-500" htmlFor="account-select">
+            {account ? "Logged in as" : "Not logged in"}
           </label>
           <select
-            id="role-select"
-            value={role}
-            onChange={(e) => setRole(e.target.value as "admin" | "dispatch")}
+            id="account-select"
+            value={account?.id ?? ""}
+            onChange={(e) => (e.target.value ? login(e.target.value) : logout())}
             className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700"
           >
-            <option value="dispatch">Dispatch</option>
-            <option value="admin">Admin</option>
+            <option value="">Log out</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} — {a.role[0].toUpperCase() + a.role.slice(1)}
+              </option>
+            ))}
           </select>
         </div>
       </div>

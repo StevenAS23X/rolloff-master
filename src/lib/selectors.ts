@@ -17,3 +17,9 @@ export function ticketCustomer(
   const customer = site ? getCustomer(customers, site.customer_id) : undefined;
   return { site, customer };
 }
+
+export function activeTicketForDumpster(tickets: Ticket[], dumpsterId: string): Ticket | undefined {
+  return tickets.find(
+    (t) => t.dumpster_id === dumpsterId && (t.status === "dropped" || t.status === "ready-to-invoice")
+  );
+}

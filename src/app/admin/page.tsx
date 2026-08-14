@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { Dumpster, DumpsterStatus, Ticket, TicketStatus } from "@/lib/types";
 import { ticketCustomer } from "@/lib/selectors";
@@ -18,14 +18,14 @@ export default function AdminPage() {
 }
 
 function AdminContent() {
-  const role = useStore((s) => s.role);
+  const account = useCurrentAccount();
   const [tab, setTab] = useState<Tab>("Dumpsters");
 
-  if (role !== "admin") {
+  if (account?.role !== "admin") {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
         <p className="text-slate-500">
-          Admin access only. Switch your role to <strong>Admin</strong> in the top-right to view
+          Admin access only. Log in as <strong>Robert</strong> (Admin) in the top-right to view
           this page.
         </p>
       </div>
