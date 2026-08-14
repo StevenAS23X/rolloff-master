@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useStore } from "@/lib/store";
+import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
+import { InlineEditableText } from "@/components/InlineEditableText";
 import { ticketCustomer } from "@/lib/selectors";
 import { todayISO } from "@/lib/timer";
 
@@ -25,6 +26,8 @@ function TicketDetailContent() {
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
   const dumpsters = useStore((s) => s.dumpsters);
+  const updateTicketFields = useStore((s) => s.updateTicketFields);
+  const account = useCurrentAccount();
 
   const ticket = tickets.find((t) => t.id === params.id);
 
@@ -73,9 +76,19 @@ function TicketDetailContent() {
             ["Type", ticket.type],
             ["Box Size", `${ticket.box_size} yd`],
             ["Material", ticket.material],
-            ["Notes", ticket.notes || "—"],
           ]}
         />
+        <div className="mt-3">
+          <p className="mb-1 text-xs font-medium text-slate-400">
+            Notes {account ? "(click to edit)" : ""}
+          </p>
+          <InlineEditableText
+            value={ticket.notes}
+            editable={!!account}
+            onSave={(notes) => updateTicketFields(ticket.id, { notes })}
+            placeholder={account ? "Click to add notes..." : "No notes yet."}
+          />
+        </div>
       </InfoCard>
 
       <InfoCard title="Customer & Site">

@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStore, NewTicketInput } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
+import { AddressAutocomplete } from "@/components/AddressAutocomplete";
 import { todayISO } from "@/lib/timer";
+import { formatPhoneInput } from "@/lib/phone";
 
 const emptyForm: NewTicketInput = {
   date_of_order: todayISO(),
@@ -79,7 +81,8 @@ function NewTicketForm() {
       <h1 className="mb-1 text-2xl font-bold text-slate-900">New Ticket — Order Taken</h1>
       <p className="mb-6 text-sm text-slate-500">
         Start typing a company name to autofill an existing customer. Site details are always
-        entered fresh.
+        entered fresh. Address fields suggest matches as you type — keep typing your own text
+        and click away to ignore them.
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -172,8 +175,10 @@ function NewTicketForm() {
             <Field label="Phone">
               <input
                 required
+                type="tel"
                 value={form.phone}
-                onChange={(e) => update("phone", e.target.value)}
+                onChange={(e) => update("phone", formatPhoneInput(e.target.value))}
+                placeholder="(813) 555-0142"
                 className={inputClass}
               />
             </Field>
@@ -187,9 +192,9 @@ function NewTicketForm() {
             </Field>
           </div>
           <Field label="Address">
-            <input
+            <AddressAutocomplete
               value={form.address}
-              onChange={(e) => update("address", e.target.value)}
+              onChange={(v) => update("address", v)}
               className={inputClass}
             />
           </Field>
@@ -213,11 +218,11 @@ function NewTicketForm() {
 
         <FormSection title="Site (entered fresh every time)">
           <Field label="Site Address">
-            <input
-              required
+            <AddressAutocomplete
               value={form.site_address}
-              onChange={(e) => update("site_address", e.target.value)}
+              onChange={(v) => update("site_address", v)}
               className={inputClass}
+              required
             />
           </Field>
           <div className="grid grid-cols-2 gap-4">
@@ -230,8 +235,10 @@ function NewTicketForm() {
             </Field>
             <Field label="Site Contact Phone">
               <input
+                type="tel"
                 value={form.site_contact_phone}
-                onChange={(e) => update("site_contact_phone", e.target.value)}
+                onChange={(e) => update("site_contact_phone", formatPhoneInput(e.target.value))}
+                placeholder="(813) 555-0177"
                 className={inputClass}
               />
             </Field>

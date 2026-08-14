@@ -9,7 +9,13 @@ export type TicketStatus =
 
 export type DumpsterStatus = "idle" | "in-service";
 
-export type Role = "admin" | "dispatch";
+export type Role = "admin" | "dispatch" | "driver";
+
+export interface Account {
+  id: string;
+  name: string;
+  role: Role;
+}
 
 export interface Customer {
   id: string;

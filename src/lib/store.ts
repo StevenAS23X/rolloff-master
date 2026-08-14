@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Customer, Dumpster, Role, Site, Ticket } from "./types";
-import { seedCustomers, seedDumpsters, seedSites, seedTickets } from "./seed";
+import { Account, Customer, Dumpster, Site, Ticket } from "./types";
+import { seedAccounts, seedCustomers, seedDumpsters, seedSites, seedTickets } from "./seed";
 
 function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
@@ -27,13 +27,15 @@ export interface NewTicketInput {
 }
 
 interface RolloffState {
-  role: Role;
+  accounts: Account[];
+  currentUserId: string | null;
   customers: Customer[];
   sites: Site[];
   tickets: Ticket[];
   dumpsters: Dumpster[];
   hasHydrated: boolean;
-  setRole: (role: Role) => void;
+  login: (userId: string) => void;
+  logout: () => void;
   setHasHydrated: (v: boolean) => void;
   createTicket: (input: NewTicketInput) => string;
   dropTicket: (
@@ -57,13 +59,15 @@ interface RolloffState {
 export const useStore = create<RolloffState>()(
   persist(
     (set, get) => ({
-      role: "dispatch",
+      accounts: seedAccounts,
+      currentUserId: seedAccounts[1]?.id ?? null,
       customers: seedCustomers,
       sites: seedSites,
       tickets: seedTickets,
       dumpsters: seedDumpsters,
       hasHydrated: false,
-      setRole: (role) => set({ role }),
+      login: (userId) => set({ currentUserId: userId }),
+      logout: () => set({ currentUserId: null }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
       createTicket: (input) => {
@@ -216,3 +220,9 @@ export const useStore = create<RolloffState>()(
     }
   )
 );
+
+export function useCurrentAccount(): Account | null {
+  const accounts = useStore((s) => s.accounts);
+  const currentUserId = useStore((s) => s.currentUserId);
+  return accounts.find((a) => a.id === currentUserId) ?? null;
+}
