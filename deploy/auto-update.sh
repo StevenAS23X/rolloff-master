@@ -4,7 +4,7 @@
 # directly on the Pi — not inside the container.
 set -euo pipefail
 
-REPO_DIR="/home/pi/rolloff-master"
+REPO_DIR="/opt/stacks/rolloff-tracker"
 BRANCH="claude/rolloff-master-repo-file-kpqwpx"
 
 cd "$REPO_DIR"
