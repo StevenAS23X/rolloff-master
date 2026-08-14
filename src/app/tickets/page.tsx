@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
@@ -29,6 +30,7 @@ export default function TicketsPage() {
 }
 
 function TicketsContent() {
+  const router = useRouter();
   const allTickets = useStore((s) => s.tickets);
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
@@ -105,14 +107,17 @@ function TicketsContent() {
                 <th className="px-4 py-2">Type</th>
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2">Timer</th>
-                <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((ticket) => {
                 const { site, customer } = ticketCustomer(ticket, sites, customers);
                 return (
-                  <tr key={ticket.id} className="hover:bg-slate-50">
+                  <tr
+                    key={ticket.id}
+                    onClick={() => router.push(`/tickets/${ticket.id}`)}
+                    className="cursor-pointer hover:bg-slate-50"
+                  >
                     <td className="px-4 py-3 text-slate-600">{ticket.date_of_order}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">
                       {customer?.company_name ?? "—"}
@@ -128,20 +133,12 @@ function TicketsContent() {
                     <td className="px-4 py-3">
                       <TimerBadge ticket={ticket} />
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/tickets/${ticket.id}`}
-                        className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
-                      >
-                        Open →
-                      </Link>
-                    </td>
                   </tr>
                 );
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
                     No tickets match this view.
                   </td>
                 </tr>

@@ -81,8 +81,15 @@ function NewTicketForm() {
   const customers = useStore((s) => s.customers);
   const sites = useStore((s) => s.sites);
   const tickets = useStore((s) => s.tickets);
+  const dumpsters = useStore((s) => s.dumpsters);
   const saveTicketDraft = useStore((s) => s.saveTicketDraft);
   const finalizeTicketDraft = useStore((s) => s.finalizeTicketDraft);
+
+  const boxSizeOptions = useMemo(
+    () =>
+      Array.from(new Set(dumpsters.map((d) => d.size_yards))).sort((a, b) => Number(a) - Number(b)),
+    [dumpsters]
+  );
 
   const [form, setForm] = useState<NewTicketInput>(() =>
     buildDraftForm(resumeId, tickets, sites, customers)
@@ -216,7 +223,7 @@ function NewTicketForm() {
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
                 placeholder="Start typing to find a repeat customer..."
                 className={inputClass}
               />
@@ -226,7 +233,10 @@ function NewTicketForm() {
                     <li key={c.id}>
                       <button
                         type="button"
-                        onMouseDown={() => applyCustomer(c.id)}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          applyCustomer(c.id);
+                        }}
                         className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
                       >
                         <span className="font-medium text-slate-900">{c.company_name}</span>{" "}
@@ -326,13 +336,21 @@ function NewTicketForm() {
         <FormSection title="Box Details">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Box Size (yards)">
-              <input
+              <select
                 required
                 value={form.box_size}
                 onChange={(e) => update("box_size", e.target.value)}
-                placeholder="e.g. 20"
                 className={inputClass}
-              />
+              >
+                <option value="" disabled>
+                  Select a size...
+                </option>
+                {boxSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size} yd
+                  </option>
+                ))}
+              </select>
             </Field>
             <Field label="Material">
               <input

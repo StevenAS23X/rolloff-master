@@ -85,7 +85,7 @@ export function AddressAutocomplete({
         placeholder={placeholder}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => setTimeout(() => setOpen(false), 250)}
         className={className}
         autoComplete="off"
       />
@@ -95,7 +95,8 @@ export function AddressAutocomplete({
             <li key={i}>
               <button
                 type="button"
-                onMouseDown={() => {
+                onPointerDown={(e) => {
+                  e.preventDefault();
                   onChange(s.display_name);
                   const city = s.address?.city ?? s.address?.town ?? s.address?.village ?? s.address?.hamlet;
                   const state = s.address?.state ? toStateAbbreviation(s.address.state) : undefined;

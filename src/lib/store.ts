@@ -1,10 +1,48 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Account, Customer, Dumpster, Site, Ticket } from "./types";
+import { useEffect, useState } from "react";
+import { Account, ChangeLogEntry, Customer, Dumpster, DumpsterStatus, Site, Ticket } from "./types";
 import { seedAccounts, seedCustomers, seedDumpsters, seedSites, seedTickets } from "./seed";
 
 function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function withDumpsterStatus(dumpsters: Dumpster[], id: string, status: DumpsterStatus): Dumpster[] {
+  return dumpsters.map((d) => {
+    if (d.id !== id || d.status === status) return d;
+    return {
+      ...d,
+      status,
+      status_history: [...d.status_history, { status, since: new Date().toISOString() }],
+    };
+  });
+}
+
+function diffToLogEntries(
+  entityType: ChangeLogEntry["entityType"],
+  entityId: string,
+  before: Record<string, unknown>,
+  patch: Record<string, unknown>,
+  changedBy: string
+): ChangeLogEntry[] {
+  const entries: ChangeLogEntry[] = [];
+  for (const field of Object.keys(patch)) {
+    const oldValue = before[field];
+    const newValue = patch[field];
+    if (oldValue === newValue) continue;
+    entries.push({
+      id: newId("log"),
+      entityType,
+      entityId,
+      field,
+      oldValue: oldValue === null || oldValue === undefined ? "" : String(oldValue),
+      newValue: newValue === null || newValue === undefined ? "" : String(newValue),
+      changedBy,
+      changedAt: new Date().toISOString(),
+    });
+  }
+  return entries;
 }
 
 export interface NewTicketInput {
@@ -33,10 +71,13 @@ interface RolloffState {
   sites: Site[];
   tickets: Ticket[];
   dumpsters: Dumpster[];
+  changeLog: ChangeLogEntry[];
   hasHydrated: boolean;
+  timeOffsetMs: number;
   login: (userId: string) => void;
   logout: () => void;
   setHasHydrated: (v: boolean) => void;
+  setTimeOffsetMs: (ms: number) => void;
   saveTicketDraft: (draftId: string | null, input: NewTicketInput) => string;
   finalizeTicketDraft: (ticketId: string) => void;
   dropTicket: (
@@ -51,10 +92,12 @@ interface RolloffState {
     ticketId: string,
     data: { invoice_number: string; invoiceable_amount: string }
   ) => void;
-  addDumpster: (dumpster: Dumpster) => void;
+  addDumpster: (dumpster: Omit<Dumpster, "status_history">) => void;
   updateDumpster: (id: string, patch: Partial<Dumpster>) => void;
   removeDumpster: (id: string) => void;
   updateTicketFields: (id: string, patch: Partial<Ticket>) => void;
+  adminUpdateTicket: (id: string, patch: Partial<Ticket>, changedBy: string) => void;
+  updateCustomerFields: (id: string, patch: Partial<Customer>) => void;
 }
 
 export const useStore = create<RolloffState>()(
@@ -66,10 +109,13 @@ export const useStore = create<RolloffState>()(
       sites: seedSites,
       tickets: seedTickets,
       dumpsters: seedDumpsters,
+      changeLog: [],
       hasHydrated: false,
+      timeOffsetMs: 0,
       login: (userId) => set({ currentUserId: userId }),
       logout: () => set({ currentUserId: null }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
+      setTimeOffsetMs: (ms) => set({ timeOffsetMs: ms }),
 
       saveTicketDraft: (draftId, input) => {
         const state = get();
@@ -200,9 +246,7 @@ export const useStore = create<RolloffState>()(
                 }
               : t
           ),
-          dumpsters: state.dumpsters.map((d) =>
-            d.id === data.dumpster_id ? { ...d, status: "in-service" } : d
-          ),
+          dumpsters: withDumpsterStatus(state.dumpsters, data.dumpster_id, "in-service"),
         });
       },
 
@@ -238,7 +282,7 @@ export const useStore = create<RolloffState>()(
               : t
           ),
           dumpsters: ticket?.dumpster_id
-            ? state.dumpsters.map((d) => (d.id === ticket.dumpster_id ? { ...d, status: "idle" } : d))
+            ? withDumpsterStatus(state.dumpsters, ticket.dumpster_id, "idle")
             : state.dumpsters,
         });
       },
@@ -246,13 +290,24 @@ export const useStore = create<RolloffState>()(
       addDumpster: (dumpster) => {
         const state = get();
         if (state.dumpsters.some((d) => d.id === dumpster.id)) return;
-        set({ dumpsters: [...state.dumpsters, dumpster] });
+        set({
+          dumpsters: [
+            ...state.dumpsters,
+            {
+              ...dumpster,
+              status_history: [{ status: dumpster.status, since: new Date().toISOString() }],
+            },
+          ],
+        });
       },
 
       updateDumpster: (id, patch) => {
         const state = get();
+        const dumpsters = patch.status
+          ? withDumpsterStatus(state.dumpsters, id, patch.status)
+          : state.dumpsters;
         set({
-          dumpsters: state.dumpsters.map((d) => (d.id === id ? { ...d, ...patch } : d)),
+          dumpsters: dumpsters.map((d) => (d.id === id ? { ...d, ...patch } : d)),
         });
       },
 
@@ -265,6 +320,30 @@ export const useStore = create<RolloffState>()(
         const state = get();
         set({
           tickets: state.tickets.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+        });
+      },
+
+      adminUpdateTicket: (id, patch, changedBy) => {
+        const state = get();
+        const ticket = state.tickets.find((t) => t.id === id);
+        if (!ticket) return;
+        const entries = diffToLogEntries(
+          "ticket",
+          id,
+          ticket as unknown as Record<string, unknown>,
+          patch as Record<string, unknown>,
+          changedBy
+        );
+        set({
+          tickets: state.tickets.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+          changeLog: entries.length > 0 ? [...entries, ...state.changeLog] : state.changeLog,
+        });
+      },
+
+      updateCustomerFields: (id, patch) => {
+        const state = get();
+        set({
+          customers: state.customers.map((c) => (c.id === id ? { ...c, ...patch } : c)),
         });
       },
     }),
@@ -281,4 +360,17 @@ export function useCurrentAccount(): Account | null {
   const accounts = useStore((s) => s.accounts);
   const currentUserId = useStore((s) => s.currentUserId);
   return accounts.find((a) => a.id === currentUserId) ?? null;
+}
+
+/** Simulated "now" — offset by the temporary dashboard time accelerator. */
+export function useOffsetNow(): Date {
+  const timeOffsetMs = useStore((s) => s.timeOffsetMs);
+  const [wallClockMs, setWallClockMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setWallClockMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return new Date(wallClockMs + timeOffsetMs);
 }

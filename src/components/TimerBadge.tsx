@@ -1,8 +1,12 @@
+"use client";
+
 import { Ticket } from "@/lib/types";
 import { daysRemaining, timerLengthDays } from "@/lib/timer";
+import { useOffsetNow } from "@/lib/store";
 
 export function TimerBadge({ ticket }: { ticket: Ticket }) {
-  const remaining = daysRemaining(ticket);
+  const now = useOffsetNow();
+  const remaining = daysRemaining(ticket, now);
   if (remaining === null) return null;
 
   const overdue = remaining < 0;

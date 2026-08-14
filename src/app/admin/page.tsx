@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useStore, useCurrentAccount } from "@/lib/store";
+import { useStore, useCurrentAccount, useOffsetNow } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
-import { Dumpster, DumpsterStatus, Ticket, TicketStatus, TicketType } from "@/lib/types";
+import { DumpsterStatus, Ticket, TicketStatus, TicketType } from "@/lib/types";
 import { ticketCustomer } from "@/lib/selectors";
+import { dumpsterStatusPercentages } from "@/lib/dumpsterMetrics";
 import { TICKET_LABELS } from "@/components/StatusBadge";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
 
@@ -72,6 +74,7 @@ function DumpstersTable() {
   const addDumpster = useStore((s) => s.addDumpster);
   const updateDumpster = useStore((s) => s.updateDumpster);
   const removeDumpster = useStore((s) => s.removeDumpster);
+  const now = useOffsetNow();
 
   const [newId, setNewId] = useState("");
   const [newSize, setNewSize] = useState("");
@@ -79,8 +82,7 @@ function DumpstersTable() {
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!newId.trim() || !newSize.trim()) return;
-    const dumpster: Dumpster = { id: newId.trim(), size_yards: newSize.trim(), status: "idle" };
-    addDumpster(dumpster);
+    addDumpster({ id: newId.trim(), size_yards: newSize.trim(), status: "idle" });
     setNewId("");
     setNewSize("");
   }
@@ -94,6 +96,9 @@ function DumpstersTable() {
               <th className="px-4 py-2">Box #</th>
               <th className="px-4 py-2">Size (yd)</th>
               <th className="px-4 py-2">Status</th>
+              <th className="px-4 py-2">% Idle</th>
+              <th className="px-4 py-2">% In Service</th>
+              <th className="px-4 py-2">% Out of Service</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
@@ -101,7 +106,9 @@ function DumpstersTable() {
             {dumpsters
               .slice()
               .sort((a, b) => a.id.localeCompare(b.id))
-              .map((d) => (
+              .map((d) => {
+                const pct = dumpsterStatusPercentages(d, now);
+                return (
                 <tr key={d.id} className="hover:bg-slate-50">
                   <td className="px-4 py-1.5 font-medium text-slate-900">#{d.id}</td>
                   <td className="px-4 py-1.5">
@@ -124,6 +131,9 @@ function DumpstersTable() {
                       <option value="out-of-service">Out of Service</option>
                     </select>
                   </td>
+                  <td className="px-4 py-1.5 text-slate-600">{pct.idle.toFixed(0)}%</td>
+                  <td className="px-4 py-1.5 text-slate-600">{pct["in-service"].toFixed(0)}%</td>
+                  <td className="px-4 py-1.5 text-slate-600">{pct["out-of-service"].toFixed(0)}%</td>
                   <td className="px-4 py-1.5 text-right">
                     <button
                       onClick={() => removeDumpster(d.id)}
@@ -133,7 +143,8 @@ function DumpstersTable() {
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
           </tbody>
         </table>
       </div>
@@ -161,25 +172,16 @@ function DumpstersTable() {
   );
 }
 
-const STATUS_OPTIONS: TicketStatus[] = [
-  "draft",
-  "order-taken",
-  "dropped",
-  "ready-to-invoice",
-  "invoiced",
-  "archived",
-];
-
 function TicketsTable() {
+  const router = useRouter();
   const tickets = useStore((s) => s.tickets);
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
-  const updateTicketFields = useStore((s) => s.updateTicketFields);
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-200 p-3">
-        <p className="text-sm text-slate-500">{tickets.length} tickets total.</p>
+        <p className="text-sm text-slate-500">{tickets.length} tickets total. Click a row to edit.</p>
         <Link
           href="/tickets/new"
           className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-700"
@@ -196,57 +198,29 @@ function TicketsTable() {
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">Invoice #</th>
               <th className="px-4 py-2">Amount</th>
-              <th className="px-4 py-2">Notes</th>
+              <th className="px-4 py-2 w-1/3">Notes</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {tickets.map((t: Ticket) => {
               const { customer } = ticketCustomer(t, sites, customers);
               return (
-                <tr key={t.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-1.5 font-medium text-slate-900">
+                <tr
+                  key={t.id}
+                  onClick={() => router.push(`/admin/tickets/${t.id}`)}
+                  className="cursor-pointer hover:bg-slate-50"
+                >
+                  <td className="px-4 py-2 font-medium text-slate-900">
                     {customer?.company_name ?? "—"}
                   </td>
-                  <td className="px-4 py-1.5 text-slate-600">
+                  <td className="px-4 py-2 text-slate-600">
                     {t.dumpster_id ? `#${t.dumpster_id}` : "—"}
                   </td>
-                  <td className="px-4 py-1.5">
-                    <select
-                      value={t.status}
-                      onChange={(e) =>
-                        updateTicketFields(t.id, { status: e.target.value as TicketStatus })
-                      }
-                      className={cellInput}
-                    >
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-1.5">
-                    <input
-                      value={t.invoice_number}
-                      onChange={(e) => updateTicketFields(t.id, { invoice_number: e.target.value })}
-                      className={cellInput}
-                    />
-                  </td>
-                  <td className="px-4 py-1.5">
-                    <input
-                      value={t.invoiceable_amount}
-                      onChange={(e) =>
-                        updateTicketFields(t.id, { invoiceable_amount: e.target.value })
-                      }
-                      className={cellInput}
-                    />
-                  </td>
-                  <td className="px-4 py-1.5">
-                    <input
-                      value={t.notes}
-                      onChange={(e) => updateTicketFields(t.id, { notes: e.target.value })}
-                      className={cellInput}
-                    />
+                  <td className="px-4 py-2 text-slate-600">{TICKET_LABELS[t.status]}</td>
+                  <td className="px-4 py-2 text-slate-600">{t.invoice_number || "—"}</td>
+                  <td className="px-4 py-2 text-slate-600">{t.invoiceable_amount || "—"}</td>
+                  <td className="px-4 py-2 whitespace-normal break-words text-slate-600">
+                    {t.notes || "—"}
                   </td>
                 </tr>
               );
@@ -260,9 +234,15 @@ function TicketsTable() {
 
 function CustomersTable() {
   const customers = useStore((s) => s.customers);
+  const updateCustomerFields = useStore((s) => s.updateCustomerFields);
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-200 p-3">
+        <p className="text-sm text-slate-500">
+          {customers.length} customers total. Edit any field directly.
+        </p>
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -272,21 +252,70 @@ function CustomersTable() {
               <th className="px-4 py-2">Phone</th>
               <th className="px-4 py-2">Email</th>
               <th className="px-4 py-2">Address</th>
+              <th className="px-4 py-2">City</th>
+              <th className="px-4 py-2">State</th>
+              <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {customers.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50">
-                <td className="px-4 py-2 font-medium text-slate-900">
-                  <Link href={`/customers/${c.id}`} className="hover:underline">
-                    {c.company_name}
-                  </Link>
+                <td className="px-4 py-1.5">
+                  <input
+                    value={c.company_name}
+                    onChange={(e) => updateCustomerFields(c.id, { company_name: e.target.value })}
+                    className={cellInput}
+                  />
                 </td>
-                <td className="px-4 py-2 text-slate-600">{c.contact_name}</td>
-                <td className="px-4 py-2 text-slate-600">{c.phone}</td>
-                <td className="px-4 py-2 text-slate-600">{c.email}</td>
-                <td className="px-4 py-2 text-slate-600">
-                  {c.address}, {c.city} {c.state}
+                <td className="px-4 py-1.5">
+                  <input
+                    value={c.contact_name}
+                    onChange={(e) => updateCustomerFields(c.id, { contact_name: e.target.value })}
+                    className={cellInput}
+                  />
+                </td>
+                <td className="px-4 py-1.5">
+                  <input
+                    value={c.phone}
+                    onChange={(e) => updateCustomerFields(c.id, { phone: e.target.value })}
+                    className={cellInput}
+                  />
+                </td>
+                <td className="px-4 py-1.5">
+                  <input
+                    value={c.email}
+                    onChange={(e) => updateCustomerFields(c.id, { email: e.target.value })}
+                    className={cellInput}
+                  />
+                </td>
+                <td className="px-4 py-1.5">
+                  <input
+                    value={c.address}
+                    onChange={(e) => updateCustomerFields(c.id, { address: e.target.value })}
+                    className={cellInput}
+                  />
+                </td>
+                <td className="px-4 py-1.5">
+                  <input
+                    value={c.city}
+                    onChange={(e) => updateCustomerFields(c.id, { city: e.target.value })}
+                    className={cellInput}
+                  />
+                </td>
+                <td className="px-4 py-1.5">
+                  <input
+                    value={c.state}
+                    onChange={(e) => updateCustomerFields(c.id, { state: e.target.value })}
+                    className={cellInput}
+                  />
+                </td>
+                <td className="px-4 py-1.5 text-right">
+                  <Link
+                    href={`/customers/${c.id}`}
+                    className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline"
+                  >
+                    View jobs →
+                  </Link>
                 </td>
               </tr>
             ))}

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RollOff Tracker",
+  title: "Roll Off Tracker Pro",
   description: "Dumpster roll-off ticket and timer tracking",
 };
 
@@ -27,6 +27,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <Nav />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+        <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
+          Roll Off Tracker Pro — built by Serpent Software LLC
+        </footer>
       </body>
     </html>
   );
