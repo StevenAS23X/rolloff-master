@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
@@ -18,9 +19,30 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
-  const tickets = useStore((s) => s.tickets);
+  const allTickets = useStore((s) => s.tickets);
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
+  const dumpsters = useStore((s) => s.dumpsters);
+  const [query, setQuery] = useState("");
+  const [sizeFilter, setSizeFilter] = useState("all");
+
+  const sizeOptions = useMemo(() => {
+    const sizes = new Set(dumpsters.map((d) => d.size_yards));
+    allTickets.forEach((t) => sizes.add(t.box_size));
+    return Array.from(sizes).sort((a, b) => Number(a) - Number(b));
+  }, [dumpsters, allTickets]);
+
+  const tickets = useMemo(() => {
+    return allTickets.filter((t) => {
+      if (sizeFilter !== "all" && t.box_size !== sizeFilter) return false;
+      if (!query.trim()) return true;
+      const { site, customer } = ticketCustomer(t, sites, customers);
+      const haystack = `${customer?.company_name ?? ""} ${customer?.address ?? ""} ${
+        site?.site_address ?? ""
+      } ${t.dumpster_id ?? ""}`.toLowerCase();
+      return haystack.includes(query.trim().toLowerCase());
+    });
+  }, [allTickets, sites, customers, query, sizeFilter]);
 
   const active = tickets.filter((t) => t.status !== "archived");
   const dropped = tickets
@@ -43,6 +65,27 @@ function DashboardContent() {
         >
           + New Ticket
         </Link>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search box # or address..."
+          className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+        />
+        <select
+          value={sizeFilter}
+          onChange={(e) => setSizeFilter(e.target.value)}
+          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+        >
+          <option value="all">All Sizes</option>
+          {sizeOptions.map((size) => (
+            <option key={size} value={size}>
+              {size} yd
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

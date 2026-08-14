@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { DumpsterStatusBadge } from "@/components/StatusBadge";
 import { activeTicketForDumpster, ticketCustomer } from "@/lib/selectors";
@@ -12,6 +12,7 @@ const FILTERS: { label: string; value: DumpsterStatus | "all" }[] = [
   { label: "All", value: "all" },
   { label: "Idle", value: "idle" },
   { label: "In Service", value: "in-service" },
+  { label: "Out of Service", value: "out-of-service" },
 ];
 
 export default function DumpstersPage() {
@@ -27,11 +28,14 @@ function DumpstersContent() {
   const tickets = useStore((s) => s.tickets);
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
+  const updateDumpster = useStore((s) => s.updateDumpster);
+  const account = useCurrentAccount();
   const [filter, setFilter] = useState<DumpsterStatus | "all">("all");
   const [query, setQuery] = useState("");
 
   const idleCount = dumpsters.filter((d) => d.status === "idle").length;
   const inServiceCount = dumpsters.filter((d) => d.status === "in-service").length;
+  const outOfServiceCount = dumpsters.filter((d) => d.status === "out-of-service").length;
 
   const filtered = useMemo(() => {
     return dumpsters
@@ -46,7 +50,8 @@ function DumpstersContent() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Dumpsters</h1>
         <p className="text-sm text-slate-500">
-          {dumpsters.length} boxes total — {idleCount} idle, {inServiceCount} in service.
+          {dumpsters.length} boxes total — {idleCount} idle, {inServiceCount} in service,{" "}
+          {outOfServiceCount} out of service.
         </p>
       </div>
 
@@ -115,6 +120,22 @@ function DumpstersContent() {
                         >
                           Open →
                         </Link>
+                      )}
+                      {!ticket && account && d.status === "idle" && (
+                        <button
+                          onClick={() => updateDumpster(d.id, { status: "out-of-service" })}
+                          className="font-medium text-red-500 hover:text-red-700 hover:underline"
+                        >
+                          Mark Out of Service
+                        </button>
+                      )}
+                      {!ticket && account && d.status === "out-of-service" && (
+                        <button
+                          onClick={() => updateDumpster(d.id, { status: "idle" })}
+                          className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline"
+                        >
+                          Return to Service
+                        </button>
                       )}
                     </td>
                   </tr>

@@ -7,7 +7,7 @@ export type TicketStatus =
   | "invoiced"
   | "archived";
 
-export type DumpsterStatus = "idle" | "in-service";
+export type DumpsterStatus = "idle" | "in-service" | "out-of-service";
 
 export type Role = "admin" | "dispatch" | "driver";
 

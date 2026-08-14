@@ -23,3 +23,12 @@ export function activeTicketForDumpster(tickets: Ticket[], dumpsterId: string): 
     (t) => t.dumpster_id === dumpsterId && (t.status === "dropped" || t.status === "ready-to-invoice")
   );
 }
+
+export function sitesForCustomer(sites: Site[], customerId: string): Site[] {
+  return sites.filter((s) => s.customer_id === customerId);
+}
+
+export function ticketsForCustomer(tickets: Ticket[], sites: Site[], customerId: string): Ticket[] {
+  const siteIds = new Set(sitesForCustomer(sites, customerId).map((s) => s.id));
+  return tickets.filter((t) => siteIds.has(t.site_id));
+}

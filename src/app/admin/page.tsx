@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
@@ -117,6 +118,7 @@ function DumpstersTable() {
                     >
                       <option value="idle">Idle</option>
                       <option value="in-service">In Service</option>
+                      <option value="out-of-service">Out of Service</option>
                     </select>
                   </td>
                   <td className="px-4 py-1.5 text-right">
@@ -262,7 +264,11 @@ function CustomersTable() {
           <tbody className="divide-y divide-slate-100">
             {customers.map((c) => (
               <tr key={c.id} className="hover:bg-slate-50">
-                <td className="px-4 py-2 font-medium text-slate-900">{c.company_name}</td>
+                <td className="px-4 py-2 font-medium text-slate-900">
+                  <Link href={`/customers/${c.id}`} className="hover:underline">
+                    {c.company_name}
+                  </Link>
+                </td>
                 <td className="px-4 py-2 text-slate-600">{c.contact_name}</td>
                 <td className="px-4 py-2 text-slate-600">{c.phone}</td>
                 <td className="px-4 py-2 text-slate-600">{c.email}</td>

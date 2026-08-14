@@ -47,7 +47,7 @@ export function AddressAutocomplete({
       abortRef.current = controller;
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=5&q=${encodeURIComponent(
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=5&countrycodes=us&q=${encodeURIComponent(
             next
           )}`,
           { signal: controller.signal }
