@@ -2,20 +2,23 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
 import { ticketCustomer } from "@/lib/selectors";
+import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
 import { TicketStatus } from "@/lib/types";
 
-const FILTERS: { label: string; value: TicketStatus | "all" }[] = [
+const BASE_FILTERS: { label: string; value: TicketStatus | "all" }[] = [
   { label: "All", value: "all" },
+  { label: "Draft", value: "draft" },
   { label: "Order Taken", value: "order-taken" },
   { label: "Box Dropped", value: "dropped" },
   { label: "Ready to Invoice", value: "ready-to-invoice" },
-  { label: "Archived", value: "archived" },
 ];
+
+const ARCHIVED_FILTER = { label: "Archived", value: "archived" as const };
 
 export default function TicketsPage() {
   return (
@@ -26,11 +29,19 @@ export default function TicketsPage() {
 }
 
 function TicketsContent() {
-  const tickets = useStore((s) => s.tickets);
+  const allTickets = useStore((s) => s.tickets);
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
+  const account = useCurrentAccount();
+  const isAdmin = account?.role === "admin";
   const [filter, setFilter] = useState<TicketStatus | "all">("all");
   const [query, setQuery] = useState("");
+
+  const tickets = useMemo(
+    () => (isAdmin ? allTickets : allTickets.filter((t) => t.status !== "archived")),
+    [allTickets, isAdmin]
+  );
+  const filters = isAdmin ? [...BASE_FILTERS, ARCHIVED_FILTER] : BASE_FILTERS;
 
   const filtered = useMemo(() => {
     return tickets
@@ -60,7 +71,7 @@ function TicketsContent() {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1">
-          {FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
@@ -110,7 +121,7 @@ function TicketsContent() {
                     <td className="px-4 py-3 text-slate-600">
                       {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
                     </td>
-                    <td className="px-4 py-3 capitalize text-slate-600">{ticket.type}</td>
+                    <td className="px-4 py-3 text-slate-600">{TICKET_TYPE_LABELS[ticket.type]}</td>
                     <td className="px-4 py-3">
                       <TicketStatusBadge status={ticket.status} />
                     </td>

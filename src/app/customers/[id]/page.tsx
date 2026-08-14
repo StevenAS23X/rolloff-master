@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useStore } from "@/lib/store";
+import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
@@ -23,6 +23,8 @@ function CustomerDetailContent() {
   const customers = useStore((s) => s.customers);
   const sites = useStore((s) => s.sites);
   const tickets = useStore((s) => s.tickets);
+  const account = useCurrentAccount();
+  const isAdmin = account?.role === "admin";
 
   const customer = customers.find((c) => c.id === params.id);
 
@@ -41,7 +43,7 @@ function CustomerDetailContent() {
     a.date_of_order < b.date_of_order ? 1 : -1
   );
   const currentJobs = jobs.filter((t) => t.status !== "archived");
-  const pastJobs = jobs.filter((t) => t.status === "archived");
+  const pastJobs = isAdmin ? jobs.filter((t) => t.status === "archived") : [];
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">

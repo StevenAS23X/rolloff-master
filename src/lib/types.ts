@@ -1,6 +1,7 @@
-export type TicketType = "residential" | "commercial";
+export type TicketType = "residential" | "commercial" | "live-load";
 
 export type TicketStatus =
+  | "draft"
   | "order-taken"
   | "dropped"
   | "ready-to-invoice"

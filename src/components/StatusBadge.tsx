@@ -1,6 +1,7 @@
 import { TicketStatus, DumpsterStatus } from "@/lib/types";
 
-const TICKET_LABELS: Record<TicketStatus, string> = {
+export const TICKET_LABELS: Record<TicketStatus, string> = {
+  draft: "Draft",
   "order-taken": "Order Taken",
   dropped: "Box Dropped",
   "ready-to-invoice": "Ready to Invoice",
@@ -9,6 +10,7 @@ const TICKET_LABELS: Record<TicketStatus, string> = {
 };
 
 const TICKET_STYLES: Record<TicketStatus, string> = {
+  draft: "bg-purple-100 text-purple-700 ring-purple-300",
   "order-taken": "bg-slate-100 text-slate-700 ring-slate-300",
   dropped: "bg-amber-100 text-amber-800 ring-amber-300",
   "ready-to-invoice": "bg-blue-100 text-blue-800 ring-blue-300",

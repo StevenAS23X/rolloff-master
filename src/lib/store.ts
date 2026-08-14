@@ -37,7 +37,8 @@ interface RolloffState {
   login: (userId: string) => void;
   logout: () => void;
   setHasHydrated: (v: boolean) => void;
-  createTicket: (input: NewTicketInput) => string;
+  saveTicketDraft: (draftId: string | null, input: NewTicketInput) => string;
+  finalizeTicketDraft: (ticketId: string) => void;
   dropTicket: (
     ticketId: string,
     data: { dumpster_id: string; drop_description: string; dropped_by_driver: string; drop_date: string }
@@ -70,8 +71,56 @@ export const useStore = create<RolloffState>()(
       logout: () => set({ currentUserId: null }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
-      createTicket: (input) => {
+      saveTicketDraft: (draftId, input) => {
         const state = get();
+        const existingTicket = draftId ? state.tickets.find((t) => t.id === draftId) : undefined;
+
+        if (existingTicket) {
+          const existingSite = state.sites.find((s) => s.id === existingTicket.site_id);
+          set({
+            customers: existingSite
+              ? state.customers.map((c) =>
+                  c.id === existingSite.customer_id
+                    ? {
+                        ...c,
+                        company_name: input.company_name,
+                        contact_name: input.contact_name,
+                        address: input.address,
+                        city: input.city,
+                        state: input.state,
+                        phone: input.phone,
+                        email: input.email,
+                      }
+                    : c
+                )
+              : state.customers,
+            sites: state.sites.map((s) =>
+              s.id === existingTicket.site_id
+                ? {
+                    ...s,
+                    site_address: input.site_address,
+                    site_contact_name: input.site_contact_name,
+                    site_contact_phone: input.site_contact_phone,
+                  }
+                : s
+            ),
+            tickets: state.tickets.map((t) =>
+              t.id === existingTicket.id
+                ? {
+                    ...t,
+                    date_of_order: input.date_of_order,
+                    type: input.type,
+                    box_size: input.box_size,
+                    material: input.material,
+                    notes: input.notes,
+                    requested_drop_date: input.requested_drop_date,
+                  }
+                : t
+            ),
+          });
+          return existingTicket.id;
+        }
+
         let customer = state.customers.find(
           (c) => c.company_name.trim().toLowerCase() === input.company_name.trim().toLowerCase()
         );
@@ -109,7 +158,7 @@ export const useStore = create<RolloffState>()(
           notes: input.notes,
           requested_drop_date: input.requested_drop_date,
           dumpster_id: null,
-          status: "order-taken",
+          status: "draft",
           drop_date: null,
           drop_description: "",
           dropped_by_driver: "",
@@ -127,6 +176,13 @@ export const useStore = create<RolloffState>()(
         });
 
         return ticket.id;
+      },
+
+      finalizeTicketDraft: (ticketId) => {
+        const state = get();
+        set({
+          tickets: state.tickets.map((t) => (t.id === ticketId ? { ...t, status: "order-taken" } : t)),
+        });
       },
 
       dropTicket: (ticketId, data) => {
