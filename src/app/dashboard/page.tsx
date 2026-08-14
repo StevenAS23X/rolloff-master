@@ -7,7 +7,7 @@ import { useStore, useOffsetNow } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
-import { daysRemaining } from "@/lib/timer";
+import { daysOnSite, daysRemaining } from "@/lib/timer";
 import { ticketCustomer } from "@/lib/selectors";
 import { Customer, Site, Ticket } from "@/lib/types";
 import { TimeAccelerator } from "@/components/TimeAccelerator";
@@ -28,6 +28,8 @@ function DashboardContent() {
   const now = useOffsetNow();
   const [query, setQuery] = useState("");
   const [sizeFilter, setSizeFilter] = useState("all");
+  const [minDaysOnSite, setMinDaysOnSite] = useState("");
+  const [maxDaysOnSite, setMaxDaysOnSite] = useState("");
 
   const sizeOptions = useMemo(() => {
     const sizes = new Set(dumpsters.map((d) => d.size_yards));
@@ -48,8 +50,18 @@ function DashboardContent() {
   }, [allTickets, sites, customers, query, sizeFilter]);
 
   const active = tickets.filter((t) => t.status !== "archived");
+  const min = minDaysOnSite.trim() === "" ? null : Number(minDaysOnSite);
+  const max = maxDaysOnSite.trim() === "" ? null : Number(maxDaysOnSite);
   const dropped = tickets
     .filter((t) => t.status === "dropped")
+    .filter((t) => {
+      if (min === null && max === null) return true;
+      const days = daysOnSite(t, now);
+      if (days === null) return false;
+      if (min !== null && days < min) return false;
+      if (max !== null && days > max) return false;
+      return true;
+    })
     .sort((a, b) => (daysRemaining(a, now) ?? 0) - (daysRemaining(b, now) ?? 0));
   const overdueCount = dropped.filter((t) => (daysRemaining(t, now) ?? 0) < 0).length;
   const drafts = tickets.filter((t) => t.status === "draft");
@@ -106,14 +118,60 @@ function DashboardContent() {
       )}
 
       <Section title="Active Timers" subtitle="Sorted by days remaining — overdue first.">
+        <div className="mb-3 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500">Days on site — min</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={minDaysOnSite}
+              onChange={(e) => setMinDaysOnSite(e.target.value)}
+              placeholder="e.g. 13"
+              className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500">Days on site — max</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={maxDaysOnSite}
+              onChange={(e) => setMaxDaysOnSite(e.target.value)}
+              placeholder="e.g. 13"
+              className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          {(minDaysOnSite || maxDaysOnSite) && (
+            <button
+              type="button"
+              onClick={() => {
+                setMinDaysOnSite("");
+                setMaxDaysOnSite("");
+              }}
+              className="rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         {dropped.length === 0 ? (
-          <EmptyRow text="No boxes currently in the field." />
+          <EmptyRow
+            text={
+              min !== null || max !== null
+                ? "No boxes on site match that days range."
+                : "No boxes currently in the field."
+            }
+          />
         ) : (
           <TicketTable
             tickets={dropped}
             sites={sites}
             customers={customers}
             showTimer
+            showDaysOnSite
+            now={now}
           />
         )}
       </Section>
@@ -191,16 +249,21 @@ function TicketTable({
   sites,
   customers,
   showTimer = false,
+  showDaysOnSite = false,
+  now,
 }: {
   tickets: Ticket[];
   sites: Site[];
   customers: Customer[];
   showTimer?: boolean;
+  showDaysOnSite?: boolean;
+  now?: Date;
 }) {
   const router = useRouter();
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className="overflow-x-auto">
+      {/* Table layout for wider screens — a row of columns doesn't have room to wrap on a phone. */}
+      <div className="hidden overflow-x-auto sm:block">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
@@ -208,6 +271,7 @@ function TicketTable({
               <th className="px-4 py-2">Site</th>
               <th className="px-4 py-2">Box</th>
               <th className="px-4 py-2">Status</th>
+              {showDaysOnSite && <th className="px-4 py-2">Days on Site</th>}
               {showTimer && <th className="px-4 py-2">Timer</th>}
             </tr>
           </thead>
@@ -230,6 +294,11 @@ function TicketTable({
                   <td className="px-4 py-3">
                     <TicketStatusBadge status={ticket.status} />
                   </td>
+                  {showDaysOnSite && (
+                    <td className="px-4 py-3 text-slate-600">
+                      {now && daysOnSite(ticket, now) !== null ? `${daysOnSite(ticket, now)}d` : "—"}
+                    </td>
+                  )}
                   {showTimer && (
                     <td className="px-4 py-3">
                       <TimerBadge ticket={ticket} />
@@ -240,6 +309,35 @@ function TicketTable({
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Stacked card layout for phones — nothing to clip or scroll sideways to see. */}
+      <div className="divide-y divide-slate-100 sm:hidden">
+        {tickets.map((ticket) => {
+          const { site, customer } = ticketCustomer(ticket, sites, customers);
+          return (
+            <button
+              key={ticket.id}
+              onClick={() => router.push(`/tickets/${ticket.id}`)}
+              className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-slate-50"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium text-slate-900">{customer?.company_name ?? "—"}</span>
+                <TicketStatusBadge status={ticket.status} />
+              </div>
+              <div className="text-sm text-slate-600">{site?.site_address ?? "—"}</div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+                <span>
+                  {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
+                </span>
+                {showDaysOnSite && now && daysOnSite(ticket, now) !== null && (
+                  <span>{daysOnSite(ticket, now)}d on site</span>
+                )}
+                {showTimer && <TimerBadge ticket={ticket} />}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -49,7 +49,7 @@ export function Nav() {
           </select>
         </div>
 
-        <nav className="order-3 flex w-full items-center gap-1 overflow-x-auto sm:order-2 sm:w-auto">
+        <nav className="order-3 flex w-full flex-wrap items-center gap-1 sm:order-2 sm:w-auto">
           {links.map((link) => {
             const active = pathname === link.href || pathname?.startsWith(link.href + "/");
             return (

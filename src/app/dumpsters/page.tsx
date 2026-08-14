@@ -78,7 +78,8 @@ function DumpstersContent() {
       </div>
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Table layout for wider screens. */}
+        <div className="hidden overflow-x-auto sm:block">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
@@ -150,6 +151,65 @@ function DumpstersContent() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Stacked card layout for phones. */}
+        <div className="divide-y divide-slate-100 sm:hidden">
+          {filtered.map((d) => {
+            const ticket = d.status === "in-service" ? activeTicketForDumpster(tickets, d.id) : undefined;
+            const { site, customer } = ticket
+              ? ticketCustomer(ticket, sites, customers)
+              : { site: undefined, customer: undefined };
+            return (
+              <div key={d.id} className="flex flex-col gap-1.5 px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium text-slate-900">
+                    #{d.id} · {d.size_yards} yd
+                  </span>
+                  <DumpsterStatusBadge status={d.status} />
+                </div>
+                <div className="text-sm text-slate-600">
+                  {ticket ? (
+                    <>
+                      <span className="font-medium text-slate-900">{customer?.company_name}</span>{" "}
+                      <span className="text-slate-400">— {site?.site_address}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+                <div className="text-sm">
+                  {ticket && (
+                    <Link
+                      href={`/tickets/${ticket.id}`}
+                      className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
+                    >
+                      Open →
+                    </Link>
+                  )}
+                  {!ticket && account?.role === "admin" && d.status === "idle" && (
+                    <button
+                      onClick={() => updateDumpster(d.id, { status: "out-of-service" })}
+                      className="font-medium text-red-500 hover:text-red-700 hover:underline"
+                    >
+                      Mark Out of Service
+                    </button>
+                  )}
+                  {!ticket && account?.role === "admin" && d.status === "out-of-service" && (
+                    <button
+                      onClick={() => updateDumpster(d.id, { status: "idle" })}
+                      className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline"
+                    >
+                      Return to Service
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="px-4 py-8 text-center text-slate-400">No dumpsters match this view.</div>
+          )}
         </div>
       </div>
     </div>
