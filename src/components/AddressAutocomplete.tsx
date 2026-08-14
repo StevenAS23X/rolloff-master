@@ -1,20 +1,35 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toStateAbbreviation } from "@/lib/usStates";
 
 interface Suggestion {
   display_name: string;
+  address?: {
+    city?: string;
+    town?: string;
+    village?: string;
+    hamlet?: string;
+    state?: string;
+  };
+}
+
+export interface AddressSelection {
+  city?: string;
+  state?: string;
 }
 
 export function AddressAutocomplete({
   value,
   onChange,
+  onSelect,
   placeholder,
   required,
   className,
 }: {
   value: string;
   onChange: (value: string) => void;
+  onSelect?: (selection: AddressSelection) => void;
   placeholder?: string;
   required?: boolean;
   className?: string;
@@ -47,7 +62,7 @@ export function AddressAutocomplete({
       abortRef.current = controller;
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=5&countrycodes=us&q=${encodeURIComponent(
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=us&q=${encodeURIComponent(
             next
           )}`,
           { signal: controller.signal }
@@ -82,6 +97,9 @@ export function AddressAutocomplete({
                 type="button"
                 onMouseDown={() => {
                   onChange(s.display_name);
+                  const city = s.address?.city ?? s.address?.town ?? s.address?.village ?? s.address?.hamlet;
+                  const state = s.address?.state ? toStateAbbreviation(s.address.state) : undefined;
+                  if (city || state) onSelect?.({ city, state });
                   setSuggestions([]);
                   setOpen(false);
                 }}

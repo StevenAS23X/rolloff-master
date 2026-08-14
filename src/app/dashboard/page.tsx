@@ -49,6 +49,7 @@ function DashboardContent() {
     .filter((t) => t.status === "dropped")
     .sort((a, b) => (daysRemaining(a) ?? 0) - (daysRemaining(b) ?? 0));
   const overdueCount = dropped.filter((t) => (daysRemaining(t) ?? 0) < 0).length;
+  const drafts = tickets.filter((t) => t.status === "draft");
   const orderTaken = tickets.filter((t) => t.status === "order-taken");
   const readyToInvoice = tickets.filter((t) => t.status === "ready-to-invoice");
 
@@ -94,6 +95,12 @@ function DashboardContent() {
         <StatTile label="Overdue" value={overdueCount} tone={overdueCount > 0 ? "danger" : "default"} />
         <StatTile label="Awaiting Invoice" value={readyToInvoice.length} />
       </div>
+
+      {drafts.length > 0 && (
+        <Section title="Drafts" subtitle="Started but not finished yet — safe to resume anytime.">
+          <TicketTable tickets={drafts} sites={sites} customers={customers} />
+        </Section>
+      )}
 
       <Section title="Active Timers" subtitle="Sorted by days remaining — overdue first.">
         {dropped.length === 0 ? (

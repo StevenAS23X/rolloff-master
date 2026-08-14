@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
-import { Dumpster, DumpsterStatus, Ticket, TicketStatus } from "@/lib/types";
+import { Dumpster, DumpsterStatus, Ticket, TicketStatus, TicketType } from "@/lib/types";
 import { ticketCustomer } from "@/lib/selectors";
+import { TICKET_LABELS } from "@/components/StatusBadge";
+import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
 
-const TABS = ["Dumpsters", "Tickets", "Customers"] as const;
+const TABS = ["Dumpsters", "Tickets", "Customers", "Metrics"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
@@ -57,6 +59,7 @@ function AdminContent() {
       {tab === "Dumpsters" && <DumpstersTable />}
       {tab === "Tickets" && <TicketsTable />}
       {tab === "Customers" && <CustomersTable />}
+      {tab === "Metrics" && <MetricsPanel />}
     </div>
   );
 }
@@ -159,6 +162,7 @@ function DumpstersTable() {
 }
 
 const STATUS_OPTIONS: TicketStatus[] = [
+  "draft",
   "order-taken",
   "dropped",
   "ready-to-invoice",
@@ -174,6 +178,15 @@ function TicketsTable() {
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-200 p-3">
+        <p className="text-sm text-slate-500">{tickets.length} tickets total.</p>
+        <Link
+          href="/tickets/new"
+          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          + Add Ticket
+        </Link>
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -280,6 +293,132 @@ function CustomersTable() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function MetricsPanel() {
+  const tickets = useStore((s) => s.tickets);
+  const dumpsters = useStore((s) => s.dumpsters);
+
+  const usageByDumpster = new Map<string, number>();
+  tickets.forEach((t) => {
+    if (!t.dumpster_id) return;
+    usageByDumpster.set(t.dumpster_id, (usageByDumpster.get(t.dumpster_id) ?? 0) + 1);
+  });
+  const topDumpsters = Array.from(usageByDumpster.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+  const maxDumpsterUsage = topDumpsters[0]?.[1] ?? 0;
+
+  const sizeCounts = new Map<string, number>();
+  tickets.forEach((t) => {
+    if (!t.box_size) return;
+    sizeCounts.set(t.box_size, (sizeCounts.get(t.box_size) ?? 0) + 1);
+  });
+  const sortedSizes = Array.from(sizeCounts.entries()).sort((a, b) => b[1] - a[1]);
+  const maxSizeCount = sortedSizes[0]?.[1] ?? 0;
+
+  const typeCounts: Record<TicketType, number> = { residential: 0, commercial: 0, "live-load": 0 };
+  tickets.forEach((t) => {
+    typeCounts[t.type] = (typeCounts[t.type] ?? 0) + 1;
+  });
+
+  const statusCounts = new Map<TicketStatus, number>();
+  tickets.forEach((t) => statusCounts.set(t.status, (statusCounts.get(t.status) ?? 0) + 1));
+
+  const totalRevenue = tickets
+    .filter((t) => t.invoiced)
+    .reduce((sum, t) => sum + (parseFloat(t.invoiceable_amount) || 0), 0);
+
+  const inServiceCount = dumpsters.filter((d) => d.status === "in-service").length;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Total Tickets" value={tickets.length} />
+        <StatTile label="Fleet Size" value={dumpsters.length} />
+        <StatTile label="Boxes In Service" value={inServiceCount} />
+        <StatTile label="Invoiced Revenue" value={`$${totalRevenue.toFixed(2)}`} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <MetricCard title="Most-Used Dumpsters">
+          {topDumpsters.length === 0 ? (
+            <p className="text-sm text-slate-400">No ticket history yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {topDumpsters.map(([id, count]) => (
+                <BarRow key={id} label={`#${id}`} count={count} max={maxDumpsterUsage} />
+              ))}
+            </div>
+          )}
+        </MetricCard>
+
+        <MetricCard title="Most Requested Box Sizes">
+          {sortedSizes.length === 0 ? (
+            <p className="text-sm text-slate-400">No ticket history yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {sortedSizes.map(([size, count]) => (
+                <BarRow key={size} label={`${size} yd`} count={count} max={maxSizeCount} />
+              ))}
+            </div>
+          )}
+        </MetricCard>
+
+        <MetricCard title="Ticket Types">
+          <div className="flex flex-col gap-2">
+            {(Object.keys(typeCounts) as TicketType[]).map((type) => (
+              <BarRow
+                key={type}
+                label={TICKET_TYPE_LABELS[type]}
+                count={typeCounts[type]}
+                max={tickets.length || 1}
+              />
+            ))}
+          </div>
+        </MetricCard>
+
+        <MetricCard title="Tickets by Status">
+          <div className="flex flex-col gap-2">
+            {Array.from(statusCounts.entries()).map(([status, count]) => (
+              <BarRow key={status} label={TICKET_LABELS[status]} count={count} max={tickets.length || 1} />
+            ))}
+          </div>
+        </MetricCard>
+      </div>
+    </div>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
+    </div>
+  );
+}
+
+function MetricCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function BarRow({ label, count, max }: { label: string; count: number; max: number }) {
+  const pct = max > 0 ? Math.round((count / max) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-36 shrink-0 text-sm font-medium text-slate-700">{label}</span>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full rounded-full bg-slate-900" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-8 shrink-0 text-right text-sm text-slate-500">{count}</span>
     </div>
   );
 }

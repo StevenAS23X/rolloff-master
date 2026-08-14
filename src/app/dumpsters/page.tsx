@@ -121,7 +121,7 @@ function DumpstersContent() {
                           Open →
                         </Link>
                       )}
-                      {!ticket && account && d.status === "idle" && (
+                      {!ticket && account?.role === "admin" && d.status === "idle" && (
                         <button
                           onClick={() => updateDumpster(d.id, { status: "out-of-service" })}
                           className="font-medium text-red-500 hover:text-red-700 hover:underline"
@@ -129,7 +129,7 @@ function DumpstersContent() {
                           Mark Out of Service
                         </button>
                       )}
-                      {!ticket && account && d.status === "out-of-service" && (
+                      {!ticket && account?.role === "admin" && d.status === "out-of-service" && (
                         <button
                           onClick={() => updateDumpster(d.id, { status: "idle" })}
                           className="font-medium text-emerald-600 hover:text-emerald-800 hover:underline"

@@ -42,6 +42,19 @@ function TicketDetailContent() {
     );
   }
 
+  if (ticket.status === "archived" && account?.role !== "admin") {
+    return (
+      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
+        <p className="text-slate-500">
+          This ticket is archived. Archived tickets are only visible to Admin.
+        </p>
+        <Link href="/tickets" className="mt-2 inline-block text-sm font-medium text-slate-700 underline">
+          Back to tickets
+        </Link>
+      </div>
+    );
+  }
+
   const { site, customer } = ticketCustomer(ticket, sites, customers);
   const dumpster = ticket.dumpster_id ? dumpsters.find((d) => d.id === ticket.dumpster_id) : undefined;
 
@@ -138,7 +151,21 @@ function TicketDetailContent() {
         </InfoCard>
       )}
 
-      {ticket.status === "order-taken" && <DropForm ticketId={ticket.id} />}
+      {ticket.status === "draft" && (
+        <InfoCard title="Draft">
+          <p className="mb-3 text-sm text-slate-600">
+            This ticket hasn&apos;t been finished yet. Pick up where you left off to turn it into
+            a real order.
+          </p>
+          <Link
+            href={`/tickets/new?draft=${ticket.id}`}
+            className="inline-block rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+          >
+            Continue Editing →
+          </Link>
+        </InfoCard>
+      )}
+      {ticket.status === "order-taken" && <DropForm ticketId={ticket.id} requestedSize={ticket.box_size} />}
       {ticket.status === "dropped" && <PickupForm ticketId={ticket.id} />}
       {ticket.status === "ready-to-invoice" && <InvoiceForm ticketId={ticket.id} />}
     </div>
@@ -170,7 +197,7 @@ function InfoGrid({ items }: { items: [string, string][] }) {
 const inputClass =
   "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
 
-function DropForm({ ticketId }: { ticketId: string }) {
+function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize: string }) {
   const dumpsters = useStore((s) => s.dumpsters);
   const dropTicket = useStore((s) => s.dropTicket);
   const idleDumpsters = dumpsters.filter((d) => d.status === "idle");
@@ -194,27 +221,36 @@ function DropForm({ ticketId }: { ticketId: string }) {
   return (
     <InfoCard title="Box Dropped">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Box Number (idle dumpsters)</span>
-          <select
-            required
-            value={dumpsterId}
-            onChange={(e) => setDumpsterId(e.target.value)}
-            className={inputClass}
-          >
-            <option value="" disabled>
-              Select a dumpster...
-            </option>
-            {idleDumpsters.map((d) => (
-              <option key={d.id} value={d.id}>
-                #{d.id} — {d.size_yards}yd
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-700">
+            Box Number (idle dumpsters — green matches the requested {requestedSize}yd size)
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {idleDumpsters.map((d) => {
+              const matches = d.size_yards === requestedSize;
+              const selected = dumpsterId === d.id;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setDumpsterId(d.id)}
+                  className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    selected
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : matches
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                      : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  #{d.id} · {d.size_yards}yd
+                </button>
+              );
+            })}
+          </div>
           {idleDumpsters.length === 0 && (
             <span className="text-xs text-red-600">No idle dumpsters available.</span>
           )}
-        </label>
+        </div>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-slate-700">Drop Date</span>
           <input
@@ -246,7 +282,7 @@ function DropForm({ ticketId }: { ticketId: string }) {
         </label>
         <button
           type="submit"
-          disabled={idleDumpsters.length === 0}
+          disabled={!dumpsterId}
           className="self-end rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Mark Box Dropped
