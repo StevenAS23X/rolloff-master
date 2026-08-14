@@ -349,6 +349,20 @@ export const useStore = create<RolloffState>()(
     }),
     {
       name: "rolloff-data",
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<RolloffState>;
+        if (Array.isArray(state.dumpsters)) {
+          state.dumpsters = state.dumpsters.map((d) =>
+            Array.isArray(d.status_history) && d.status_history.length > 0
+              ? d
+              : { ...d, status_history: [{ status: d.status, since: new Date().toISOString() }] }
+          );
+        }
+        if (!Array.isArray(state.changeLog)) state.changeLog = [];
+        if (typeof state.timeOffsetMs !== "number") state.timeOffsetMs = 0;
+        return state;
+      },
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
