@@ -96,7 +96,8 @@ function TicketsContent() {
       </div>
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Table layout for wider screens — seven columns can't wrap on a phone. */}
+        <div className="hidden overflow-x-auto sm:block">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
@@ -145,6 +146,37 @@ function TicketsContent() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Stacked card layout for phones — nothing to clip or scroll sideways to see. */}
+        <div className="divide-y divide-slate-100 sm:hidden">
+          {filtered.map((ticket) => {
+            const { site, customer } = ticketCustomer(ticket, sites, customers);
+            return (
+              <button
+                key={ticket.id}
+                onClick={() => router.push(`/tickets/${ticket.id}`)}
+                className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-slate-50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium text-slate-900">{customer?.company_name ?? "—"}</span>
+                  <TicketStatusBadge status={ticket.status} />
+                </div>
+                <div className="text-sm text-slate-600">{site?.site_address ?? "—"}</div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+                  <span>{ticket.date_of_order}</span>
+                  <span>
+                    {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
+                  </span>
+                  <span>{TICKET_TYPE_LABELS[ticket.type]}</span>
+                  <TimerBadge ticket={ticket} />
+                </div>
+              </button>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="px-4 py-8 text-center text-slate-400">No tickets match this view.</div>
+          )}
         </div>
       </div>
     </div>

@@ -26,6 +26,13 @@ export function isTimerActive(ticket: Ticket): boolean {
   return ticket.status === "dropped";
 }
 
+/** Whole days elapsed since the box was dropped — null if it hasn't been dropped yet. */
+export function daysOnSite(ticket: Ticket, now: Date = new Date()): number | null {
+  if (!ticket.drop_date) return null;
+  const dropped = new Date(ticket.drop_date);
+  return Math.floor((now.getTime() - dropped.getTime()) / DAY_MS);
+}
+
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }

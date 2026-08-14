@@ -48,7 +48,8 @@ function CustomersContent() {
       />
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Table layout for wider screens. */}
+        <div className="hidden overflow-x-auto sm:block">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
@@ -96,6 +97,35 @@ function CustomersContent() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Stacked card layout for phones. */}
+        <div className="divide-y divide-slate-100 sm:hidden">
+          {filtered.map((c) => {
+            const activeJobs = ticketsForCustomer(tickets, sites, c.id).filter(
+              (t) => t.status !== "archived"
+            ).length;
+            return (
+              <Link
+                key={c.id}
+                href={`/customers/${c.id}`}
+                className="flex flex-col gap-1.5 px-4 py-3 hover:bg-slate-50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-medium text-slate-900">{c.company_name}</span>
+                  <span className="whitespace-nowrap text-sm text-slate-500">{activeJobs} active</span>
+                </div>
+                <div className="text-sm text-slate-600">{c.contact_name}</div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-600">
+                  <span>{c.phone}</span>
+                  <span className="break-all">{c.email}</span>
+                </div>
+              </Link>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="px-4 py-8 text-center text-slate-400">No customers match this search.</div>
+          )}
         </div>
       </div>
     </div>

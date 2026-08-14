@@ -114,7 +114,7 @@ function AdminTicketEditContent() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <FormSection title="Order">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Date of Order">
               <input
                 type="date"
@@ -132,7 +132,7 @@ function AdminTicketEditContent() {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Type">
               <select
                 value={form.type}
@@ -160,7 +160,7 @@ function AdminTicketEditContent() {
               </select>
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Box Size">
               <input
                 value={form.box_size}
@@ -201,7 +201,7 @@ function AdminTicketEditContent() {
               ))}
             </select>
           </Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Drop Date">
               <input
                 type="date"
@@ -225,7 +225,7 @@ function AdminTicketEditContent() {
               className={inputClass}
             />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Pickup Date">
               <input
                 type="date"
@@ -253,7 +253,7 @@ function AdminTicketEditContent() {
             />
             Invoiced
           </label>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Invoice Number">
               <input
                 value={form.invoice_number}

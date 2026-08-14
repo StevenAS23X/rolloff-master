@@ -228,16 +228,13 @@ function NewTicketForm() {
                 className={inputClass}
               />
               {showSuggestions && suggestions.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+                <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
                   {suggestions.map((c) => (
                     <li key={c.id}>
                       <button
                         type="button"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          applyCustomer(c.id);
-                        }}
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        onClick={() => applyCustomer(c.id)}
+                        className="block w-full touch-manipulation px-3 py-3 text-left text-sm hover:bg-slate-50 active:bg-slate-100"
                       >
                         <span className="font-medium text-slate-900">{c.company_name}</span>{" "}
                         <span className="text-slate-400">— {c.contact_name}</span>
@@ -256,7 +253,7 @@ function NewTicketForm() {
               className={inputClass}
             />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Phone">
               <input
                 required
@@ -286,7 +283,7 @@ function NewTicketForm() {
               className={inputClass}
             />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="City">
               <input
                 value={form.city}
@@ -313,7 +310,7 @@ function NewTicketForm() {
               required
             />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Site Contact Name">
               <input
                 value={form.site_contact_name}
@@ -334,7 +331,7 @@ function NewTicketForm() {
         </FormSection>
 
         <FormSection title="Box Details">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Box Size (yards)">
               <select
                 required

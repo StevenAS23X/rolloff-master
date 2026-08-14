@@ -16,3 +16,14 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Inputs under 16px make iOS Safari auto-zoom on focus, which throws off
+   taps on autofill/suggestion dropdowns right after. Force 16px on phones
+   regardless of the Tailwind text-sm classes used for desktop layout. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
