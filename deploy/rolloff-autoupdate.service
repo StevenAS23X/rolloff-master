@@ -1,0 +1,9 @@
+[Unit]
+Description=Pull and redeploy Roll Off Tracker Pro if the repo changed
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=pi
+ExecStart=/home/pi/rolloff-master/deploy/auto-update.sh

@@ -1,0 +1,25 @@
+#!/bin/bash
+# Pulls the deployed branch and rebuilds the container only if something
+# actually changed. Meant to be run on a schedule (see rolloff-autoupdate.timer)
+# directly on the Pi — not inside the container.
+set -euo pipefail
+
+REPO_DIR="/home/pi/rolloff-master"
+BRANCH="claude/rolloff-master-repo-file-kpqwpx"
+
+cd "$REPO_DIR"
+
+git fetch origin "$BRANCH"
+
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse "origin/$BRANCH")
+
+if [ "$LOCAL" = "$REMOTE" ]; then
+  echo "$(date -Is) up to date ($LOCAL)"
+  exit 0
+fi
+
+echo "$(date -Is) updating $LOCAL -> $REMOTE"
+git pull origin "$BRANCH"
+docker compose up -d --build
+echo "$(date -Is) deployed $REMOTE"
