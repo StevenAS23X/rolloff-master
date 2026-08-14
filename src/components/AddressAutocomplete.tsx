@@ -95,8 +95,7 @@ export function AddressAutocomplete({
             <li key={i}>
               <button
                 type="button"
-                onPointerDown={(e) => {
-                  e.preventDefault();
+                onClick={() => {
                   onChange(s.display_name);
                   const city = s.address?.city ?? s.address?.town ?? s.address?.village ?? s.address?.hamlet;
                   const state = s.address?.state ? toStateAbbreviation(s.address.state) : undefined;

@@ -233,10 +233,7 @@ function NewTicketForm() {
                     <li key={c.id}>
                       <button
                         type="button"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          applyCustomer(c.id);
-                        }}
+                        onClick={() => applyCustomer(c.id)}
                         className="block w-full touch-manipulation px-3 py-3 text-left text-sm hover:bg-slate-50 active:bg-slate-100"
                       >
                         <span className="font-medium text-slate-900">{c.company_name}</span>{" "}
