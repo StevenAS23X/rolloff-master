@@ -90,7 +90,7 @@ export function AddressAutocomplete({
         autoComplete="off"
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
           {suggestions.map((s, i) => (
             <li key={i}>
               <button
@@ -104,7 +104,7 @@ export function AddressAutocomplete({
                   setSuggestions([]);
                   setOpen(false);
                 }}
-                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                className="block w-full touch-manipulation px-3 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100"
               >
                 {s.display_name}
               </button>
