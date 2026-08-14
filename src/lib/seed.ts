@@ -6,6 +6,12 @@ function daysAgoISO(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+function daysAgoTimestamp(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
+}
+
 export const seedAccounts: Account[] = [
   { id: "acct-robert", name: "Robert", role: "admin" },
   { id: "acct-ava", name: "Ava", role: "dispatch" },
@@ -76,16 +82,82 @@ export const seedSites: Site[] = [
 ];
 
 export const seedDumpsters: Dumpster[] = [
-  { id: "1001", size_yards: "10", status: "idle" },
-  { id: "1002", size_yards: "10", status: "idle" },
-  { id: "1015", size_yards: "20", status: "in-service" },
-  { id: "1016", size_yards: "20", status: "in-service" },
-  { id: "1020", size_yards: "20", status: "idle" },
-  { id: "1033", size_yards: "30", status: "idle" },
-  { id: "1034", size_yards: "30", status: "in-service" },
-  { id: "1040", size_yards: "40", status: "idle" },
-  { id: "1041", size_yards: "40", status: "idle" },
-  { id: "1050", size_yards: "15", status: "in-service" },
+  {
+    id: "1001",
+    size_yards: "10",
+    status: "idle",
+    status_history: [{ status: "idle", since: daysAgoTimestamp(60) }],
+  },
+  {
+    id: "1002",
+    size_yards: "10",
+    status: "idle",
+    status_history: [{ status: "idle", since: daysAgoTimestamp(45) }],
+  },
+  {
+    id: "1015",
+    size_yards: "20",
+    status: "in-service",
+    status_history: [
+      { status: "idle", since: daysAgoTimestamp(60) },
+      { status: "in-service", since: daysAgoTimestamp(11) },
+    ],
+  },
+  {
+    id: "1016",
+    size_yards: "20",
+    status: "in-service",
+    status_history: [
+      { status: "idle", since: daysAgoTimestamp(60) },
+      { status: "in-service", since: daysAgoTimestamp(29) },
+    ],
+  },
+  {
+    id: "1020",
+    size_yards: "20",
+    status: "idle",
+    status_history: [{ status: "idle", since: daysAgoTimestamp(50) }],
+  },
+  {
+    id: "1033",
+    size_yards: "30",
+    status: "idle",
+    status_history: [{ status: "idle", since: daysAgoTimestamp(70) }],
+  },
+  {
+    id: "1034",
+    size_yards: "30",
+    status: "in-service",
+    status_history: [
+      { status: "idle", since: daysAgoTimestamp(60) },
+      { status: "in-service", since: daysAgoTimestamp(19) },
+    ],
+  },
+  {
+    id: "1040",
+    size_yards: "40",
+    status: "idle",
+    status_history: [{ status: "idle", since: daysAgoTimestamp(40) }],
+  },
+  {
+    id: "1041",
+    size_yards: "40",
+    status: "idle",
+    status_history: [
+      { status: "idle", since: daysAgoTimestamp(60) },
+      { status: "out-of-service", since: daysAgoTimestamp(5) },
+      { status: "idle", since: daysAgoTimestamp(2) },
+    ],
+  },
+  {
+    id: "1050",
+    size_yards: "15",
+    status: "in-service",
+    status_history: [
+      { status: "idle", since: daysAgoTimestamp(60) },
+      { status: "in-service", since: daysAgoTimestamp(2) },
+    ],
+  },
 ];
 
 export const seedTickets: Ticket[] = [

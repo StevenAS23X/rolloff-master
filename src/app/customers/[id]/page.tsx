@@ -124,6 +124,7 @@ function JobsTable({
   sites: Site[];
   showTimer?: boolean;
 }) {
+  const router = useRouter();
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -135,14 +136,17 @@ function JobsTable({
               <th className="px-4 py-2">Box</th>
               <th className="px-4 py-2">Status</th>
               {showTimer && <th className="px-4 py-2">Timer</th>}
-              <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {jobs.map((ticket) => {
               const site = getSite(sites, ticket.site_id);
               return (
-                <tr key={ticket.id} className="hover:bg-slate-50">
+                <tr
+                  key={ticket.id}
+                  onClick={() => router.push(`/tickets/${ticket.id}`)}
+                  className="cursor-pointer hover:bg-slate-50"
+                >
                   <td className="px-4 py-3 font-medium text-slate-900">{site?.site_address ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-600">
                     {site?.site_contact_name || "—"}
@@ -161,14 +165,6 @@ function JobsTable({
                       <TimerBadge ticket={ticket} />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/tickets/${ticket.id}`}
-                      className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
-                    >
-                      Open →
-                    </Link>
-                  </td>
                 </tr>
               );
             })}

@@ -58,8 +58,25 @@ export interface Ticket {
   invoiceable_amount: string;
 }
 
+export interface DumpsterStatusEntry {
+  status: DumpsterStatus;
+  since: string; // ISO timestamp
+}
+
 export interface Dumpster {
   id: string;
   size_yards: string;
   status: DumpsterStatus;
+  status_history: DumpsterStatusEntry[];
+}
+
+export interface ChangeLogEntry {
+  id: string;
+  entityType: "ticket" | "customer";
+  entityId: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  changedBy: string;
+  changedAt: string; // ISO timestamp
 }

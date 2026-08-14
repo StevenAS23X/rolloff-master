@@ -201,11 +201,19 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
   const dumpsters = useStore((s) => s.dumpsters);
   const dropTicket = useStore((s) => s.dropTicket);
   const idleDumpsters = dumpsters.filter((d) => d.status === "idle");
+  const sizeOptions = Array.from(new Set(dumpsters.map((d) => d.size_yards))).sort(
+    (a, b) => Number(a) - Number(b)
+  );
 
+  const [yardage, setYardage] = useState(requestedSize || sizeOptions[0] || "");
   const [dumpsterId, setDumpsterId] = useState("");
   const [description, setDescription] = useState("");
   const [driver, setDriver] = useState("");
   const [dropDate, setDropDate] = useState(todayISO());
+
+  const matchingIdle = idleDumpsters.filter((d) => d.size_yards === yardage);
+  const usingFallback = matchingIdle.length === 0 && idleDumpsters.length > 0;
+  const displayedDumpsters = usingFallback ? idleDumpsters : matchingIdle;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -221,13 +229,32 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
   return (
     <InfoCard title="Box Dropped">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-700">Yardage Needed</span>
+          <select
+            value={yardage}
+            onChange={(e) => {
+              setYardage(e.target.value);
+              setDumpsterId("");
+            }}
+            className={inputClass}
+          >
+            {sizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size} yd
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-slate-700">
-            Box Number (idle dumpsters — green matches the requested {requestedSize}yd size)
+            {usingFallback
+              ? `Box Number (no idle ${yardage}yd boxes — showing other idle sizes)`
+              : "Box Number (idle, matching size)"}
           </span>
           <div className="flex flex-wrap gap-2">
-            {idleDumpsters.map((d) => {
-              const matches = d.size_yards === requestedSize;
+            {displayedDumpsters.map((d) => {
+              const matches = d.size_yards === yardage;
               const selected = dumpsterId === d.id;
               return (
                 <button

@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
+import { useStore, useOffsetNow } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
 import { daysRemaining } from "@/lib/timer";
 import { ticketCustomer } from "@/lib/selectors";
 import { Customer, Site, Ticket } from "@/lib/types";
+import { TimeAccelerator } from "@/components/TimeAccelerator";
 
 export default function DashboardPage() {
   return (
@@ -23,6 +25,7 @@ function DashboardContent() {
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
   const dumpsters = useStore((s) => s.dumpsters);
+  const now = useOffsetNow();
   const [query, setQuery] = useState("");
   const [sizeFilter, setSizeFilter] = useState("all");
 
@@ -47,8 +50,8 @@ function DashboardContent() {
   const active = tickets.filter((t) => t.status !== "archived");
   const dropped = tickets
     .filter((t) => t.status === "dropped")
-    .sort((a, b) => (daysRemaining(a) ?? 0) - (daysRemaining(b) ?? 0));
-  const overdueCount = dropped.filter((t) => (daysRemaining(t) ?? 0) < 0).length;
+    .sort((a, b) => (daysRemaining(a, now) ?? 0) - (daysRemaining(b, now) ?? 0));
+  const overdueCount = dropped.filter((t) => (daysRemaining(t, now) ?? 0) < 0).length;
   const drafts = tickets.filter((t) => t.status === "draft");
   const orderTaken = tickets.filter((t) => t.status === "order-taken");
   const readyToInvoice = tickets.filter((t) => t.status === "ready-to-invoice");
@@ -130,6 +133,8 @@ function DashboardContent() {
           <TicketTable tickets={readyToInvoice} sites={sites} customers={customers} />
         )}
       </Section>
+
+      <TimeAccelerator />
     </div>
   );
 }
@@ -192,6 +197,7 @@ function TicketTable({
   customers: Customer[];
   showTimer?: boolean;
 }) {
+  const router = useRouter();
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -203,14 +209,17 @@ function TicketTable({
               <th className="px-4 py-2">Box</th>
               <th className="px-4 py-2">Status</th>
               {showTimer && <th className="px-4 py-2">Timer</th>}
-              <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {tickets.map((ticket) => {
               const { site, customer } = ticketCustomer(ticket, sites, customers);
               return (
-                <tr key={ticket.id} className="hover:bg-slate-50">
+                <tr
+                  key={ticket.id}
+                  onClick={() => router.push(`/tickets/${ticket.id}`)}
+                  className="cursor-pointer hover:bg-slate-50"
+                >
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {customer?.company_name ?? "—"}
                   </td>
@@ -226,14 +235,6 @@ function TicketTable({
                       <TimerBadge ticket={ticket} />
                     </td>
                   )}
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/tickets/${ticket.id}`}
-                      className="font-medium text-slate-600 hover:text-slate-900 hover:underline"
-                    >
-                      Open →
-                    </Link>
-                  </td>
                 </tr>
               );
             })}

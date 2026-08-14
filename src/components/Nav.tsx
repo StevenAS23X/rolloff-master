@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useStore, useCurrentAccount } from "@/lib/store";
+import { DumpsterIcon } from "@/components/DumpsterIcon";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", adminOnly: false },
@@ -24,8 +25,9 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <Link href="/dashboard" className="text-base font-bold text-slate-900">
-          🗑️ RollOff Tracker
+        <Link href="/dashboard" className="flex items-center gap-2 text-base font-bold text-slate-900">
+          <DumpsterIcon className="h-6 w-9" />
+          Roll Off Tracker Pro
         </Link>
 
         <div className="order-2 flex items-center gap-2 sm:order-3">
