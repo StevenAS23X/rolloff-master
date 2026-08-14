@@ -57,7 +57,13 @@ function TicketDetailContent() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
-              {customer?.company_name ?? "Unknown customer"}
+              {customer ? (
+                <Link href={`/customers/${customer.id}`} className="hover:underline">
+                  {customer.company_name}
+                </Link>
+              ) : (
+                "Unknown customer"
+              )}
             </h1>
             <p className="text-sm text-slate-500">{site?.site_address}</p>
           </div>

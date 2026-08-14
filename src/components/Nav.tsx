@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard", adminOnly: false },
   { href: "/tickets", label: "Tickets", adminOnly: false },
   { href: "/dumpsters", label: "Dumpsters", adminOnly: false },
+  { href: "/customers", label: "Customers", adminOnly: false },
   { href: "/admin", label: "Admin", adminOnly: true },
 ];
 
@@ -22,31 +23,12 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Link href="/dashboard" className="text-base font-bold text-slate-900">
           🗑️ RollOff Tracker
         </Link>
 
-        <nav className="flex items-center gap-1 overflow-x-auto">
-          {links.map((link) => {
-            const active = pathname === link.href || pathname?.startsWith(link.href + "/");
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-2">
+        <div className="order-2 flex items-center gap-2 sm:order-3">
           <label className="text-xs font-medium text-slate-500" htmlFor="account-select">
             {account ? "Logged in as" : "Not logged in"}
           </label>
@@ -64,6 +46,25 @@ export function Nav() {
             ))}
           </select>
         </div>
+
+        <nav className="order-3 flex w-full items-center gap-1 overflow-x-auto sm:order-2 sm:w-auto">
+          {links.map((link) => {
+            const active = pathname === link.href || pathname?.startsWith(link.href + "/");
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );

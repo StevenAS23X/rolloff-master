@@ -26,9 +26,16 @@ export function TicketStatusBadge({ status }: { status: TicketStatus }) {
   );
 }
 
+const DUMPSTER_LABELS: Record<DumpsterStatus, string> = {
+  idle: "Idle",
+  "in-service": "In Service",
+  "out-of-service": "Out of Service",
+};
+
 const DUMPSTER_STYLES: Record<DumpsterStatus, string> = {
   idle: "bg-emerald-100 text-emerald-800 ring-emerald-300",
   "in-service": "bg-orange-100 text-orange-800 ring-orange-300",
+  "out-of-service": "bg-red-100 text-red-800 ring-red-300",
 };
 
 export function DumpsterStatusBadge({ status }: { status: DumpsterStatus }) {
@@ -36,7 +43,7 @@ export function DumpsterStatusBadge({ status }: { status: DumpsterStatus }) {
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset whitespace-nowrap ${DUMPSTER_STYLES[status]}`}
     >
-      {status === "idle" ? "Idle" : "In Service"}
+      {DUMPSTER_LABELS[status]}
     </span>
   );
 }
