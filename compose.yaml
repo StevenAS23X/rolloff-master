@@ -2,6 +2,17 @@ services:
   rolloff:
     build: .
     container_name: rolloff-tracker
-    ports:
-      - "3000:3000"
     restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.rolloff.rule=Host(`rolloff.dark-horse.site`)
+      - traefik.http.routers.rolloff.entrypoints=websecure
+      - traefik.http.routers.rolloff.tls=true
+      - traefik.http.services.rolloff.loadbalancer.server.port=3000
+      - traefik.docker.network=proxy
+      - traefik.http.routers.rolloff.tls.certresolver=cloudflare
+networks:
+  proxy:
+    external: true
