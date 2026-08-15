@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useEffect, useState } from "react";
-import { Account, ChangeLogEntry, Customer, Dumpster, DumpsterStatus, Site, Ticket } from "./types";
-import { seedAccounts, seedCustomers, seedDumpsters, seedSites, seedTickets } from "./seed";
+import { Account, ChangeLogEntry, Customer, Driver, Dumpster, DumpsterStatus, Site, Ticket } from "./types";
+import { seedAccounts, seedCustomers, seedDrivers, seedDumpsters, seedSites, seedTickets } from "./seed";
 
 function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
@@ -71,6 +71,7 @@ interface RolloffState {
   sites: Site[];
   tickets: Ticket[];
   dumpsters: Dumpster[];
+  drivers: Driver[];
   changeLog: ChangeLogEntry[];
   hasHydrated: boolean;
   timeOffsetMs: number;
@@ -95,6 +96,9 @@ interface RolloffState {
   addDumpster: (dumpster: Omit<Dumpster, "status_history">) => void;
   updateDumpster: (id: string, patch: Partial<Dumpster>) => void;
   removeDumpster: (id: string) => void;
+  addDriver: (driver: { name: string; phone: string }) => void;
+  updateDriver: (id: string, patch: Partial<Driver>) => void;
+  removeDriver: (id: string) => void;
   updateTicketFields: (id: string, patch: Partial<Ticket>) => void;
   adminUpdateTicket: (id: string, patch: Partial<Ticket>, changedBy: string) => void;
   updateCustomerFields: (id: string, patch: Partial<Customer>) => void;
@@ -109,6 +113,7 @@ export const useStore = create<RolloffState>()(
       sites: seedSites,
       tickets: seedTickets,
       dumpsters: seedDumpsters,
+      drivers: seedDrivers,
       changeLog: [],
       hasHydrated: false,
       timeOffsetMs: 0,
@@ -316,6 +321,25 @@ export const useStore = create<RolloffState>()(
         set({ dumpsters: state.dumpsters.filter((d) => d.id !== id) });
       },
 
+      addDriver: (driver) => {
+        const state = get();
+        set({
+          drivers: [...state.drivers, { id: newId("drv"), name: driver.name, phone: driver.phone, active: true }],
+        });
+      },
+
+      updateDriver: (id, patch) => {
+        const state = get();
+        set({
+          drivers: state.drivers.map((d) => (d.id === id ? { ...d, ...patch } : d)),
+        });
+      },
+
+      removeDriver: (id) => {
+        const state = get();
+        set({ drivers: state.drivers.filter((d) => d.id !== id) });
+      },
+
       updateTicketFields: (id, patch) => {
         const state = get();
         set({
@@ -349,7 +373,7 @@ export const useStore = create<RolloffState>()(
     }),
     {
       name: "rolloff-data",
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as Partial<RolloffState>;
         if (Array.isArray(state.dumpsters)) {
@@ -361,6 +385,7 @@ export const useStore = create<RolloffState>()(
         }
         if (!Array.isArray(state.changeLog)) state.changeLog = [];
         if (typeof state.timeOffsetMs !== "number") state.timeOffsetMs = 0;
+        if (!Array.isArray(state.drivers)) state.drivers = seedDrivers;
         return state;
       },
       onRehydrateStorage: () => (state) => {
