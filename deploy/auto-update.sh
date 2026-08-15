@@ -5,7 +5,7 @@
 set -euo pipefail
 
 REPO_DIR="/opt/stacks/rolloff-tracker"
-BRANCH="claude/rolloff-master-repo-file-kpqwpx"
+BRANCH="main"
 
 cd "$REPO_DIR"
 
