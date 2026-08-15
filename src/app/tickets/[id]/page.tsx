@@ -197,6 +197,39 @@ function InfoGrid({ items }: { items: [string, string][] }) {
 const inputClass =
   "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
 
+function DriverField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const drivers = useStore((s) => s.drivers);
+  const activeDrivers = drivers.filter((d) => d.active);
+
+  if (activeDrivers.length === 0) {
+    return (
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-slate-700">Driver</span>
+        <input required value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} />
+        <span className="text-xs text-slate-400">
+          No drivers on file yet — add one under Admin → Drivers to select from a list next time.
+        </span>
+      </label>
+    );
+  }
+
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-slate-700">Driver</span>
+      <select required value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+        <option value="" disabled>
+          Select a driver...
+        </option>
+        {activeDrivers.map((d) => (
+          <option key={d.id} value={d.name}>
+            {d.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize: string }) {
   const dumpsters = useStore((s) => s.dumpsters);
   const dropTicket = useStore((s) => s.dropTicket);
@@ -298,15 +331,7 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
             className={inputClass}
           />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Driver</span>
-          <input
-            required
-            value={driver}
-            onChange={(e) => setDriver(e.target.value)}
-            className={inputClass}
-          />
-        </label>
+        <DriverField value={driver} onChange={setDriver} />
         <button
           type="submit"
           disabled={!dumpsterId}
@@ -342,15 +367,7 @@ function PickupForm({ ticketId }: { ticketId: string }) {
             className={inputClass}
           />
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Driver</span>
-          <input
-            required
-            value={driver}
-            onChange={(e) => setDriver(e.target.value)}
-            className={inputClass}
-          />
-        </label>
+        <DriverField value={driver} onChange={setDriver} />
         <button
           type="submit"
           className="self-end rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700"

@@ -6,12 +6,12 @@ import { useState } from "react";
 import { useStore, useCurrentAccount, useOffsetNow } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { DumpsterStatus, Ticket, TicketStatus, TicketType } from "@/lib/types";
-import { ticketCustomer } from "@/lib/selectors";
+import { driverEvents, ticketCustomer } from "@/lib/selectors";
 import { dumpsterStatusPercentages } from "@/lib/dumpsterMetrics";
 import { TICKET_LABELS } from "@/components/StatusBadge";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
 
-const TABS = ["Dumpsters", "Tickets", "Customers", "Metrics"] as const;
+const TABS = ["Dumpsters", "Tickets", "Customers", "Drivers", "Metrics"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
@@ -61,6 +61,7 @@ function AdminContent() {
       {tab === "Dumpsters" && <DumpstersTable />}
       {tab === "Tickets" && <TicketsTable />}
       {tab === "Customers" && <CustomersTable />}
+      {tab === "Drivers" && <DriversTable />}
       {tab === "Metrics" && <MetricsPanel />}
     </div>
   );
@@ -322,6 +323,120 @@ function CustomersTable() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function DriversTable() {
+  const router = useRouter();
+  const drivers = useStore((s) => s.drivers);
+  const tickets = useStore((s) => s.tickets);
+  const addDriver = useStore((s) => s.addDriver);
+  const updateDriver = useStore((s) => s.updateDriver);
+  const removeDriver = useStore((s) => s.removeDriver);
+
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    addDriver({ name: newName.trim(), phone: newPhone.trim() });
+    setNewName("");
+    setNewPhone("");
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-200 p-3">
+        <p className="text-sm text-slate-500">
+          {drivers.length} drivers on file. Click a row to see their drop-off / pickup history.
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-4 py-2">Name</th>
+              <th className="px-4 py-2">Phone</th>
+              <th className="px-4 py-2">Active</th>
+              <th className="px-4 py-2">Boxes Handled</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {drivers
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((d) => {
+                const eventCount = driverEvents(tickets, d.name).length;
+                return (
+                  <tr
+                    key={d.id}
+                    onClick={() => router.push(`/admin/drivers/${d.id}`)}
+                    className="cursor-pointer hover:bg-slate-50"
+                  >
+                    <td className="px-4 py-2 font-medium text-slate-900">{d.name}</td>
+                    <td className="px-4 py-2 text-slate-600">{d.phone || "—"}</td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${
+                          d.active
+                            ? "bg-emerald-100 text-emerald-800 ring-emerald-300"
+                            : "bg-zinc-100 text-zinc-600 ring-zinc-300"
+                        }`}
+                      >
+                        {d.active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-slate-600">{eventCount}</td>
+                    <td className="px-4 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => updateDriver(d.id, { active: !d.active })}
+                        className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline"
+                      >
+                        {d.active ? "Deactivate" : "Reactivate"}
+                      </button>
+                      <button
+                        onClick={() => removeDriver(d.id)}
+                        className="ml-3 text-xs font-medium text-red-500 hover:text-red-700 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            {drivers.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                  No drivers on file yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <form onSubmit={handleAdd} className="flex flex-wrap items-center gap-2 border-t border-slate-200 p-3">
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Driver name"
+          className="w-48 rounded border border-slate-300 px-2 py-1.5 text-sm"
+        />
+        <input
+          value={newPhone}
+          onChange={(e) => setNewPhone(e.target.value)}
+          placeholder="Phone (optional)"
+          className="w-40 rounded border border-slate-300 px-2 py-1.5 text-sm"
+        />
+        <button
+          type="submit"
+          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-700"
+        >
+          + Add Driver
+        </button>
+      </form>
     </div>
   );
 }

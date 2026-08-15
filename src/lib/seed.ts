@@ -1,4 +1,4 @@
-import { Account, Customer, Dumpster, Site, Ticket } from "./types";
+import { Account, Customer, Driver, Dumpster, Site, Ticket } from "./types";
 
 function daysAgoISO(days: number): string {
   const d = new Date();
@@ -48,6 +48,11 @@ export const seedCustomers: Customer[] = [
     phone: "(727) 555-0110",
     email: "carla@sunbeltroofing.com",
   },
+];
+
+export const seedDrivers: Driver[] = [
+  { id: "drv-1", name: "Tony Ruiz", phone: "(813) 555-0199", active: true },
+  { id: "drv-2", name: "Marcus Lee", phone: "(813) 555-0188", active: true },
 ];
 
 export const seedSites: Site[] = [

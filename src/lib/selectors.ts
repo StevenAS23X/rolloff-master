@@ -32,3 +32,23 @@ export function ticketsForCustomer(tickets: Ticket[], sites: Site[], customerId:
   const siteIds = new Set(sitesForCustomer(sites, customerId).map((s) => s.id));
   return tickets.filter((t) => siteIds.has(t.site_id));
 }
+
+export interface DriverEvent {
+  ticket: Ticket;
+  action: "dropped" | "picked-up";
+  date: string;
+}
+
+/** Every drop-off / pickup a driver has on record, newest first. */
+export function driverEvents(tickets: Ticket[], driverName: string): DriverEvent[] {
+  const events: DriverEvent[] = [];
+  for (const t of tickets) {
+    if (t.dropped_by_driver === driverName && t.drop_date) {
+      events.push({ ticket: t, action: "dropped", date: t.drop_date });
+    }
+    if (t.picked_up_by_driver === driverName && t.pickup_date) {
+      events.push({ ticket: t, action: "picked-up", date: t.pickup_date });
+    }
+  }
+  return events.sort((a, b) => (a.date < b.date ? 1 : -1));
+}

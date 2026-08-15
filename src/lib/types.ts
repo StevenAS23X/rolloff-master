@@ -18,6 +18,13 @@ export interface Account {
   role: Role;
 }
 
+export interface Driver {
+  id: string;
+  name: string;
+  phone: string;
+  active: boolean;
+}
+
 export interface Customer {
   id: string;
   company_name: string;
