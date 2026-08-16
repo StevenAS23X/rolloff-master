@@ -126,61 +126,24 @@ export const useStore = create<RolloffState>()(
       saveTicketDraft: (draftId, input) => {
         const state = get();
         const existingTicket = draftId ? state.tickets.find((t) => t.id === draftId) : undefined;
+        const existingSite = existingTicket
+          ? state.sites.find((s) => s.id === existingTicket.site_id)
+          : undefined;
+        const previousCustomerId = existingSite?.customer_id;
 
-        if (existingTicket) {
-          const existingSite = state.sites.find((s) => s.id === existingTicket.site_id);
-          set({
-            customers: existingSite
-              ? state.customers.map((c) =>
-                  c.id === existingSite.customer_id
-                    ? {
-                        ...c,
-                        company_name: input.company_name,
-                        contact_name: input.contact_name,
-                        address: input.address,
-                        city: input.city,
-                        state: input.state,
-                        phone: input.phone,
-                        email: input.email,
-                      }
-                    : c
-                )
-              : state.customers,
-            sites: state.sites.map((s) =>
-              s.id === existingTicket.site_id
-                ? {
-                    ...s,
-                    site_address: input.site_address,
-                    site_contact_name: input.site_contact_name,
-                    site_contact_phone: input.site_contact_phone,
-                  }
-                : s
-            ),
-            tickets: state.tickets.map((t) =>
-              t.id === existingTicket.id
-                ? {
-                    ...t,
-                    date_of_order: input.date_of_order,
-                    type: input.type,
-                    box_size: input.box_size,
-                    material: input.material,
-                    notes: input.notes,
-                    requested_drop_date: input.requested_drop_date,
-                  }
-                : t
-            ),
-          });
-          return existingTicket.id;
-        }
-
-        let customer = state.customers.find(
+        // Always re-resolve the customer by name — re-checking on every save (not just the
+        // first) is what stops a customer typed partway through from getting created for real
+        // and then silently drifting away from an existing customer of the same name once the
+        // rest of the name is typed.
+        const nameMatch = state.customers.find(
           (c) => c.company_name.trim().toLowerCase() === input.company_name.trim().toLowerCase()
         );
 
+        let customer: Customer;
         let customers = state.customers;
-        if (!customer) {
+        if (nameMatch) {
           customer = {
-            id: newId("cust"),
+            ...nameMatch,
             company_name: input.company_name,
             contact_name: input.contact_name,
             address: input.address,
@@ -189,44 +152,117 @@ export const useStore = create<RolloffState>()(
             phone: input.phone,
             email: input.email,
           };
-          customers = [...customers, customer];
+          customers = state.customers.map((c) => (c.id === nameMatch.id ? customer : c));
+
+          // If this draft was previously linked to a *different* customer record (typically a
+          // stray created from a partially-typed name before it came to match an existing
+          // customer), and nothing else references it, drop it instead of leaving an orphan
+          // duplicate behind.
+          if (previousCustomerId && previousCustomerId !== nameMatch.id) {
+            const orphaned = !state.sites.some(
+              (s) => s.customer_id === previousCustomerId && s.id !== existingSite?.id
+            );
+            if (orphaned) customers = customers.filter((c) => c.id !== previousCustomerId);
+          }
+        } else {
+          // No name match. If this draft already had its own customer record (and nothing
+          // else references it), just rename/update it in place rather than abandoning it —
+          // that's what a stray customer left behind by an earlier partial save would be.
+          const previousCustomer = previousCustomerId
+            ? state.customers.find((c) => c.id === previousCustomerId)
+            : undefined;
+          const previousCustomerSharedElsewhere =
+            previousCustomerId != null &&
+            state.sites.some((s) => s.customer_id === previousCustomerId && s.id !== existingSite?.id);
+
+          if (previousCustomer && !previousCustomerSharedElsewhere) {
+            customer = {
+              ...previousCustomer,
+              company_name: input.company_name,
+              contact_name: input.contact_name,
+              address: input.address,
+              city: input.city,
+              state: input.state,
+              phone: input.phone,
+              email: input.email,
+            };
+            customers = state.customers.map((c) => (c.id === previousCustomer.id ? customer : c));
+          } else {
+            customer = {
+              id: newId("cust"),
+              company_name: input.company_name,
+              contact_name: input.contact_name,
+              address: input.address,
+              city: input.city,
+              state: input.state,
+              phone: input.phone,
+              email: input.email,
+            };
+            customers = [...customers, customer];
+          }
         }
 
-        const site: Site = {
-          id: newId("site"),
-          customer_id: customer.id,
-          site_address: input.site_address,
-          site_contact_name: input.site_contact_name,
-          site_contact_phone: input.site_contact_phone,
-        };
+        let site: Site;
+        let sites = state.sites;
+        if (existingSite) {
+          site = {
+            ...existingSite,
+            customer_id: customer.id,
+            site_address: input.site_address,
+            site_contact_name: input.site_contact_name,
+            site_contact_phone: input.site_contact_phone,
+          };
+          sites = state.sites.map((s) => (s.id === existingSite.id ? site : s));
+        } else {
+          site = {
+            id: newId("site"),
+            customer_id: customer.id,
+            site_address: input.site_address,
+            site_contact_name: input.site_contact_name,
+            site_contact_phone: input.site_contact_phone,
+          };
+          sites = [...sites, site];
+        }
 
-        const ticket: Ticket = {
-          id: newId("tkt"),
-          site_id: site.id,
-          date_of_order: input.date_of_order,
-          type: input.type,
-          box_size: input.box_size,
-          material: input.material,
-          notes: input.notes,
-          requested_drop_date: input.requested_drop_date,
-          dumpster_id: null,
-          status: "draft",
-          drop_date: null,
-          drop_description: "",
-          dropped_by_driver: "",
-          pickup_date: null,
-          picked_up_by_driver: "",
-          invoiced: false,
-          invoice_number: "",
-          invoiceable_amount: "",
-        };
+        let ticket: Ticket;
+        let tickets = state.tickets;
+        if (existingTicket) {
+          ticket = {
+            ...existingTicket,
+            site_id: site.id,
+            date_of_order: input.date_of_order,
+            type: input.type,
+            box_size: input.box_size,
+            material: input.material,
+            notes: input.notes,
+            requested_drop_date: input.requested_drop_date,
+          };
+          tickets = state.tickets.map((t) => (t.id === existingTicket.id ? ticket : t));
+        } else {
+          ticket = {
+            id: newId("tkt"),
+            site_id: site.id,
+            date_of_order: input.date_of_order,
+            type: input.type,
+            box_size: input.box_size,
+            material: input.material,
+            notes: input.notes,
+            requested_drop_date: input.requested_drop_date,
+            dumpster_id: null,
+            status: "draft",
+            drop_date: null,
+            drop_description: "",
+            dropped_by_driver: "",
+            pickup_date: null,
+            picked_up_by_driver: "",
+            invoiced: false,
+            invoice_number: "",
+            invoiceable_amount: "",
+          };
+          tickets = [...tickets, ticket];
+        }
 
-        set({
-          customers,
-          sites: [...state.sites, site],
-          tickets: [...state.tickets, ticket],
-        });
-
+        set({ customers, sites, tickets });
         return ticket.id;
       },
 

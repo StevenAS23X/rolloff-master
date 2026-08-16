@@ -10,6 +10,7 @@ import { driverEvents, ticketCustomer } from "@/lib/selectors";
 import { dumpsterStatusPercentages } from "@/lib/dumpsterMetrics";
 import { TICKET_LABELS } from "@/components/StatusBadge";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
+import { formatPhoneInput } from "@/lib/phone";
 
 const TABS = ["Dumpsters", "Tickets", "Customers", "Drivers", "Metrics"] as const;
 type Tab = (typeof TABS)[number];
@@ -81,13 +82,23 @@ function DumpstersTable() {
 
   const [newId, setNewId] = useState("");
   const [newSize, setNewSize] = useState("");
+  const [newIdError, setNewIdError] = useState<string | null>(null);
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!newId.trim() || !newSize.trim()) return;
-    addDumpster({ id: newId.trim(), size_yards: newSize.trim(), status: "idle" });
+    if (!/^\d{4}$/.test(newId) || Number(newId) === 0) {
+      setNewIdError("Box # must be a 4-digit number (e.g. 1099).");
+      return;
+    }
+    if (!newSize.trim()) return;
+    if (dumpsters.some((d) => d.id === newId)) {
+      setNewIdError("That box # already exists.");
+      return;
+    }
+    addDumpster({ id: newId, size_yards: newSize.trim(), status: "idle" });
     setNewId("");
     setNewSize("");
+    setNewIdError(null);
   }
 
   return (
@@ -157,13 +168,23 @@ function DumpstersTable() {
           </tbody>
         </table>
       </div>
-      <form onSubmit={handleAdd} className="flex flex-wrap items-center gap-2 border-t border-slate-200 p-3">
-        <input
-          value={newId}
-          onChange={(e) => setNewId(e.target.value)}
-          placeholder="Box # (e.g. 1099)"
-          className="w-40 rounded border border-slate-300 px-2 py-1.5 text-sm"
-        />
+      <form
+        onSubmit={handleAdd}
+        className="flex flex-wrap items-center gap-2 border-t border-slate-200 p-3"
+      >
+        <div className="flex flex-col gap-1">
+          <input
+            value={newId}
+            inputMode="numeric"
+            onChange={(e) => {
+              setNewId(e.target.value.replace(/\D/g, "").slice(0, 4));
+              setNewIdError(null);
+            }}
+            placeholder="Box # (e.g. 1099)"
+            className="w-40 rounded border border-slate-300 px-2 py-1.5 text-sm"
+          />
+          {newIdError && <span className="text-xs font-medium text-red-600">{newIdError}</span>}
+        </div>
         <input
           value={newSize}
           onChange={(e) => setNewSize(e.target.value)}
@@ -433,9 +454,10 @@ function DriversTable() {
           className="w-48 rounded border border-slate-300 px-2 py-1.5 text-sm"
         />
         <input
+          type="tel"
           value={newPhone}
-          onChange={(e) => setNewPhone(e.target.value)}
-          placeholder="Phone (optional)"
+          onChange={(e) => setNewPhone(formatPhoneInput(e.target.value))}
+          placeholder="(813) 555-0142"
           className="w-40 rounded border border-slate-300 px-2 py-1.5 text-sm"
         />
         <button

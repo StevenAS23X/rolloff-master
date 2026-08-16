@@ -47,7 +47,7 @@ function DashboardContent() {
       const haystack = `${customer?.company_name ?? ""} ${customer?.address ?? ""} ${
         site?.site_address ?? ""
       } ${t.dumpster_id ?? ""}`.toLowerCase();
-      return haystack.includes(query.trim().toLowerCase());
+      return haystack.includes(query.trim().toLowerCase().replace(/#/g, ""));
     });
   }, [allTickets, sites, customers, query, sizeFilter]);
 

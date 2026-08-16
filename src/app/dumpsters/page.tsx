@@ -40,7 +40,7 @@ function DumpstersContent() {
   const filtered = useMemo(() => {
     return dumpsters
       .filter((d) => filter === "all" || d.status === filter)
-      .filter((d) => !query.trim() || d.id.includes(query.trim()))
+      .filter((d) => !query.trim() || d.id.includes(query.trim().replace(/#/g, "")))
       .slice()
       .sort((a, b) => a.id.localeCompare(b.id));
   }, [dumpsters, filter, query]);
