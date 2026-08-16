@@ -7,10 +7,11 @@ import { useStore, useOffsetNow } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
-import { daysOnSite, daysRemaining } from "@/lib/timer";
+import { daysOnSite, daysRemaining, timerDueDate } from "@/lib/timer";
 import { ticketCustomer } from "@/lib/selectors";
 import { Customer, Site, Ticket } from "@/lib/types";
 import { TimeAccelerator } from "@/components/TimeAccelerator";
+import { MONTH_LABELS, dateToISODate, formatDisplayDate, monthGridCells, parseISODateLocal } from "@/lib/calendarUtil";
 
 export default function DashboardPage() {
   return (
@@ -26,6 +27,7 @@ function DashboardContent() {
   const customers = useStore((s) => s.customers);
   const dumpsters = useStore((s) => s.dumpsters);
   const now = useOffsetNow();
+  const [view, setView] = useState<"list" | "calendar">("list");
   const [query, setQuery] = useState("");
   const [sizeFilter, setSizeFilter] = useState("all");
   const [minDaysOnSite, setMinDaysOnSite] = useState("");
@@ -83,25 +85,46 @@ function DashboardContent() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search box # or address..."
-          className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
-        />
-        <select
-          value={sizeFilter}
-          onChange={(e) => setSizeFilter(e.target.value)}
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
-        >
-          <option value="all">All Sizes</option>
-          {sizeOptions.map((size) => (
-            <option key={size} value={size}>
-              {size} yd
-            </option>
-          ))}
-        </select>
+      <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1 w-fit">
+        {(["list", "calendar"] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
+              view === v ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+
+      {view === "calendar" ? (
+        <DispatchCalendar tickets={allTickets} sites={sites} customers={customers} now={now} />
+      ) : (
+        <>
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search box # or address..."
+            className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+          <select
+            value={sizeFilter}
+            onChange={(e) => setSizeFilter(e.target.value)}
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+          >
+            <option value="all">All Sizes</option>
+            {sizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size} yd
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="text-xs text-slate-400">Search and size apply to every list on this page.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -143,6 +166,9 @@ function DashboardContent() {
               className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
           </label>
+          <span className="mb-2 text-xs text-slate-400">
+            Narrows this list only, by days since drop-off — leave blank for no limit, or set both to the same number for an exact match. Not the same as &quot;days left&quot; on the timer badge.
+          </span>
           {(minDaysOnSite || maxDaysOnSite) && (
             <button
               type="button"
@@ -191,6 +217,8 @@ function DashboardContent() {
           <TicketTable tickets={readyToInvoice} sites={sites} customers={customers} />
         )}
       </Section>
+        </>
+      )}
 
       <TimeAccelerator />
     </div>
@@ -338,6 +366,181 @@ function TicketTable({
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+interface CalendarEvent {
+  type: "requested-drop" | "pickup-due" | "picked-up";
+  ticket: Ticket;
+}
+
+const EVENT_LABEL: Record<CalendarEvent["type"], string> = {
+  "requested-drop": "Requested Drop",
+  "pickup-due": "Pickup Due",
+  "picked-up": "Picked Up",
+};
+
+const EVENT_DOT_COLOR: Record<CalendarEvent["type"], string> = {
+  "requested-drop": "bg-sky-500",
+  "pickup-due": "bg-amber-500",
+  "picked-up": "bg-emerald-500",
+};
+
+const EVENT_BADGE_STYLE: Record<CalendarEvent["type"], string> = {
+  "requested-drop": "bg-sky-100 text-sky-800 ring-sky-300",
+  "pickup-due": "bg-amber-100 text-amber-800 ring-amber-300",
+  "picked-up": "bg-emerald-100 text-emerald-800 ring-emerald-300",
+};
+
+function DispatchCalendar({
+  tickets,
+  sites,
+  customers,
+  now,
+}: {
+  tickets: Ticket[];
+  sites: Site[];
+  customers: Customer[];
+  now: Date;
+}) {
+  const router = useRouter();
+  const todayIso = dateToISODate(now);
+  const [viewMonth, setViewMonth] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(todayIso);
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    const add = (date: string | null, ev: CalendarEvent) => {
+      if (!date) return;
+      const list = map.get(date) ?? [];
+      list.push(ev);
+      map.set(date, list);
+    };
+    for (const t of tickets) {
+      if (t.status === "order-taken" && t.requested_drop_date) {
+        add(t.requested_drop_date, { type: "requested-drop", ticket: t });
+      }
+      if (t.status === "dropped") {
+        const due = timerDueDate(t);
+        if (due) add(dateToISODate(due), { type: "pickup-due", ticket: t });
+      }
+      if (t.pickup_date) {
+        add(t.pickup_date, { type: "picked-up", ticket: t });
+      }
+    }
+    return map;
+  }, [tickets]);
+
+  const cells = monthGridCells(viewMonth);
+  const selectedDateObj = parseISODateLocal(selectedDate);
+  const selectedEvents = eventsByDate.get(selectedDate) ?? [];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+        {(Object.keys(EVENT_LABEL) as CalendarEvent["type"][]).map((type) => (
+          <span key={type} className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${EVENT_DOT_COLOR[type]}`} />
+            {EVENT_LABEL[type]}
+          </span>
+        ))}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}
+            className="rounded px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100"
+          >
+            ‹
+          </button>
+          <span className="text-sm font-semibold text-slate-900">
+            {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
+          </span>
+          <button
+            type="button"
+            onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}
+            className="rounded px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100"
+          >
+            ›
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400">
+          {["S", "M", "T", "W", "T", "F", "S"].map((w, i) => (
+            <span key={i} className="py-1">
+              {w}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((day, i) => {
+            if (!day) return <span key={i} />;
+            const iso = dateToISODate(day);
+            const events = eventsByDate.get(iso) ?? [];
+            const isToday = iso === todayIso;
+            const isSelected = iso === selectedDate;
+            const dotTypes = Array.from(new Set(events.map((e) => e.type)));
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setSelectedDate(iso)}
+                className={`flex touch-manipulation flex-col items-center gap-0.5 rounded-md py-1.5 text-sm ${
+                  isSelected
+                    ? "bg-slate-900 text-white"
+                    : isToday
+                    ? "font-semibold text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-100"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                <span>{day.getDate()}</span>
+                <span className="flex h-1.5 gap-0.5">
+                  {dotTypes.slice(0, 3).map((type) => (
+                    <span key={type} className={`h-1.5 w-1.5 rounded-full ${EVENT_DOT_COLOR[type]}`} />
+                  ))}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-semibold text-slate-900">
+          {selectedDateObj ? formatDisplayDate(selectedDateObj) : selectedDate}
+        </h3>
+        {selectedEvents.length === 0 ? (
+          <p className="text-sm text-slate-400">Nothing scheduled this day.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-slate-100">
+            {selectedEvents.map((ev, i) => {
+              const { site, customer } = ticketCustomer(ev.ticket, sites, customers);
+              return (
+                <li
+                  key={i}
+                  onClick={() => router.push(`/tickets/${ev.ticket.id}`)}
+                  className="flex cursor-pointer items-center justify-between gap-2 py-2 hover:bg-slate-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{customer?.company_name ?? "—"}</p>
+                    <p className="text-xs text-slate-500">
+                      {site?.site_address ?? "—"}
+                      {ev.ticket.dumpster_id ? ` · #${ev.ticket.dumpster_id}` : ""}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${EVENT_BADGE_STYLE[ev.type]}`}
+                  >
+                    {EVENT_LABEL[ev.type]}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );

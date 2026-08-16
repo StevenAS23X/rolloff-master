@@ -5,9 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useStore, NewTicketInput } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { AddressAutocomplete } from "@/components/AddressAutocomplete";
+import { DatePicker } from "@/components/DatePicker";
 import { todayISO } from "@/lib/timer";
 import { formatPhoneInput } from "@/lib/phone";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
+import { parseCityState } from "@/lib/usStates";
 import { Customer, Site, Ticket, TicketType } from "@/lib/types";
 
 const emptyForm: NewTicketInput = {
@@ -157,14 +159,10 @@ function NewTicketForm() {
         {resumeId ? "Resume Draft Ticket" : "New Ticket — Order Taken"}
       </h1>
       <p className="mb-1 text-sm text-slate-500">
-        Start typing a company name to autofill an existing customer. Site details are always
-        entered fresh. Address fields suggest matches as you type — keep typing your own text
-        and click away to ignore them.
+        Type a company name to autofill a repeat customer. Site details are entered fresh each time.
       </p>
       <p className="mb-6 text-xs font-medium text-slate-400">
-        {savedAt || resumeId
-          ? "Saved as a draft — safe to leave and come back from the Tickets list."
-          : "Your progress saves automatically as a draft once you start typing."}
+        {savedAt || resumeId ? "Draft saved." : "Draft saves automatically as you type."}
       </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -179,11 +177,10 @@ function NewTicketForm() {
             />
           </Field>
           <Field label="Requested Drop Date">
-            <input
-              type="date"
+            <DatePicker
               required
               value={form.requested_drop_date}
-              onChange={(e) => update("requested_drop_date", e.target.value)}
+              onChange={(v) => update("requested_drop_date", v)}
               className={inputClass}
             />
           </Field>
@@ -280,6 +277,16 @@ function NewTicketForm() {
               onSelect={({ city, state }) => {
                 setForm((f) => ({ ...f, city: city ?? f.city, state: state ?? f.state }));
               }}
+              onBlurValue={(v) => {
+                if (form.city.trim() && form.state.trim()) return;
+                const parsed = parseCityState(v);
+                if (!parsed.city && !parsed.state) return;
+                setForm((f) => ({
+                  ...f,
+                  city: f.city.trim() ? f.city : parsed.city ?? f.city,
+                  state: f.state.trim() ? f.state : parsed.state ?? f.state,
+                }));
+              }}
               className={inputClass}
             />
           </Field>
@@ -301,7 +308,7 @@ function NewTicketForm() {
           </div>
         </FormSection>
 
-        <FormSection title="Site (entered fresh every time)">
+        <FormSection title="Site Info">
           <Field label="Site Address">
             <AddressAutocomplete
               value={form.site_address}
@@ -330,7 +337,7 @@ function NewTicketForm() {
           </div>
         </FormSection>
 
-        <FormSection title="Box Details">
+        <FormSection title="Details">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Box Size (yards)">
               <select

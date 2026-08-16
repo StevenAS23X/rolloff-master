@@ -41,7 +41,9 @@ function AdminContent() {
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Admin</h1>
-        <p className="text-sm text-slate-500">Direct, Excel-like access to the underlying data.</p>
+        <p className="text-sm text-slate-500">
+          Manage dumpsters, tickets, customers, and drivers, and review business metrics.
+        </p>
       </div>
 
       <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1 w-fit">
@@ -136,9 +138,15 @@ function DumpstersTable() {
                   <td className="px-4 py-1.5 text-slate-600">{pct["in-service"].toFixed(0)}%</td>
                   <td className="px-4 py-1.5 text-slate-600">{pct["out-of-service"].toFixed(0)}%</td>
                   <td className="px-4 py-1.5 text-right">
+                    <Link
+                      href={`/admin/dumpsters/${d.id}`}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-800 hover:underline"
+                    >
+                      Service record →
+                    </Link>
                     <button
                       onClick={() => removeDumpster(d.id)}
-                      className="text-xs font-medium text-red-500 hover:text-red-700 hover:underline"
+                      className="ml-3 text-xs font-medium text-red-500 hover:text-red-700 hover:underline"
                     >
                       Remove
                     </button>

@@ -92,12 +92,14 @@ export const seedDumpsters: Dumpster[] = [
     size_yards: "10",
     status: "idle",
     status_history: [{ status: "idle", since: daysAgoTimestamp(60) }],
+    service_notes: [],
   },
   {
     id: "1002",
     size_yards: "10",
     status: "idle",
     status_history: [{ status: "idle", since: daysAgoTimestamp(45) }],
+    service_notes: [],
   },
   {
     id: "1015",
@@ -107,6 +109,7 @@ export const seedDumpsters: Dumpster[] = [
       { status: "idle", since: daysAgoTimestamp(60) },
       { status: "in-service", since: daysAgoTimestamp(11) },
     ],
+    service_notes: [],
   },
   {
     id: "1016",
@@ -116,18 +119,21 @@ export const seedDumpsters: Dumpster[] = [
       { status: "idle", since: daysAgoTimestamp(60) },
       { status: "in-service", since: daysAgoTimestamp(29) },
     ],
+    service_notes: [],
   },
   {
     id: "1020",
     size_yards: "20",
     status: "idle",
     status_history: [{ status: "idle", since: daysAgoTimestamp(50) }],
+    service_notes: [],
   },
   {
     id: "1033",
     size_yards: "30",
     status: "idle",
     status_history: [{ status: "idle", since: daysAgoTimestamp(70) }],
+    service_notes: [],
   },
   {
     id: "1034",
@@ -137,12 +143,14 @@ export const seedDumpsters: Dumpster[] = [
       { status: "idle", since: daysAgoTimestamp(60) },
       { status: "in-service", since: daysAgoTimestamp(19) },
     ],
+    service_notes: [],
   },
   {
     id: "1040",
     size_yards: "40",
     status: "idle",
     status_history: [{ status: "idle", since: daysAgoTimestamp(40) }],
+    service_notes: [],
   },
   {
     id: "1041",
@@ -153,6 +161,20 @@ export const seedDumpsters: Dumpster[] = [
       { status: "out-of-service", since: daysAgoTimestamp(5) },
       { status: "idle", since: daysAgoTimestamp(2) },
     ],
+    service_notes: [
+      {
+        id: "svc-1",
+        note: "Flat tire on the curbside wheel — sent to the yard for a swap.",
+        createdAt: daysAgoTimestamp(5),
+        createdBy: "Robert",
+      },
+      {
+        id: "svc-2",
+        note: "Wheel replaced, gate hinge greased. Back in rotation.",
+        createdAt: daysAgoTimestamp(2),
+        createdBy: "Robert",
+      },
+    ],
   },
   {
     id: "1050",
@@ -162,6 +184,7 @@ export const seedDumpsters: Dumpster[] = [
       { status: "idle", since: daysAgoTimestamp(60) },
       { status: "in-service", since: daysAgoTimestamp(2) },
     ],
+    service_notes: [],
   },
 ];
 
