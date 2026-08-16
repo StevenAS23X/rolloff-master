@@ -10,6 +10,12 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Baked into the client bundle so the running app can show what it was built from —
+# see deploy/auto-update.sh, which sets these before each rebuild.
+ARG GIT_SHA=dev
+ARG BUILD_TIME=
+ENV NEXT_PUBLIC_GIT_SHA=$GIT_SHA
+ENV NEXT_PUBLIC_BUILD_TIME=$BUILD_TIME
 RUN npm run build
 
 FROM node:22-alpine AS runner

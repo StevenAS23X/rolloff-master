@@ -1,6 +1,13 @@
 services:
   rolloff:
-    build: .
+    build:
+      context: .
+      args:
+        # Set by deploy/auto-update.sh before each rebuild so the running app can show
+        # what commit/time it was actually built from. Manual `docker compose up --build`
+        # without exporting these first just falls back to "dev".
+        GIT_SHA: ${GIT_SHA:-dev}
+        BUILD_TIME: ${BUILD_TIME:-}
     container_name: rolloff-tracker
     restart: unless-stopped
     networks:
