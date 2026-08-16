@@ -23,6 +23,7 @@ export function AddressAutocomplete({
   value,
   onChange,
   onSelect,
+  onBlurValue,
   placeholder,
   required,
   className,
@@ -30,6 +31,8 @@ export function AddressAutocomplete({
   value: string;
   onChange: (value: string) => void;
   onSelect?: (selection: AddressSelection) => void;
+  /** Fires on blur with the current text — lets the caller fall back to a local parse if no suggestion was ever picked. */
+  onBlurValue?: (value: string) => void;
   placeholder?: string;
   required?: boolean;
   className?: string;
@@ -85,7 +88,10 @@ export function AddressAutocomplete({
         placeholder={placeholder}
         onChange={(e) => handleChange(e.target.value)}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 250)}
+        onBlur={() => {
+          onBlurValue?.(value);
+          setTimeout(() => setOpen(false), 250);
+        }}
         className={className}
         autoComplete="off"
       />

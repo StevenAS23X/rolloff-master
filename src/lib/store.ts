@@ -93,9 +93,10 @@ interface RolloffState {
     ticketId: string,
     data: { invoice_number: string; invoiceable_amount: string }
   ) => void;
-  addDumpster: (dumpster: Omit<Dumpster, "status_history">) => void;
+  addDumpster: (dumpster: Omit<Dumpster, "status_history" | "service_notes">) => void;
   updateDumpster: (id: string, patch: Partial<Dumpster>) => void;
   removeDumpster: (id: string) => void;
+  addDumpsterServiceNote: (id: string, note: string, createdBy: string) => void;
   addDriver: (driver: { name: string; phone: string }) => void;
   updateDriver: (id: string, patch: Partial<Driver>) => void;
   removeDriver: (id: string) => void;
@@ -301,6 +302,7 @@ export const useStore = create<RolloffState>()(
             {
               ...dumpster,
               status_history: [{ status: dumpster.status, since: new Date().toISOString() }],
+              service_notes: [],
             },
           ],
         });
@@ -319,6 +321,23 @@ export const useStore = create<RolloffState>()(
       removeDumpster: (id) => {
         const state = get();
         set({ dumpsters: state.dumpsters.filter((d) => d.id !== id) });
+      },
+
+      addDumpsterServiceNote: (id, note, createdBy) => {
+        const state = get();
+        set({
+          dumpsters: state.dumpsters.map((d) =>
+            d.id === id
+              ? {
+                  ...d,
+                  service_notes: [
+                    ...d.service_notes,
+                    { id: newId("svc"), note, createdAt: new Date().toISOString(), createdBy },
+                  ],
+                }
+              : d
+          ),
+        });
       },
 
       addDriver: (driver) => {
@@ -373,15 +392,19 @@ export const useStore = create<RolloffState>()(
     }),
     {
       name: "rolloff-data",
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const state = persistedState as Partial<RolloffState>;
         if (Array.isArray(state.dumpsters)) {
-          state.dumpsters = state.dumpsters.map((d) =>
-            Array.isArray(d.status_history) && d.status_history.length > 0
-              ? d
-              : { ...d, status_history: [{ status: d.status, since: new Date().toISOString() }] }
-          );
+          state.dumpsters = state.dumpsters.map((d) => {
+            const withHistory =
+              Array.isArray(d.status_history) && d.status_history.length > 0
+                ? d
+                : { ...d, status_history: [{ status: d.status, since: new Date().toISOString() }] };
+            return Array.isArray(withHistory.service_notes)
+              ? withHistory
+              : { ...withHistory, service_notes: [] };
+          });
         }
         if (!Array.isArray(state.changeLog)) state.changeLog = [];
         if (typeof state.timeOffsetMs !== "number") state.timeOffsetMs = 0;

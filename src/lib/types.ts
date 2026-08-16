@@ -70,11 +70,19 @@ export interface DumpsterStatusEntry {
   since: string; // ISO timestamp
 }
 
+export interface ServiceNote {
+  id: string;
+  note: string;
+  createdAt: string; // ISO timestamp
+  createdBy: string;
+}
+
 export interface Dumpster {
   id: string;
   size_yards: string;
   status: DumpsterStatus;
   status_history: DumpsterStatusEntry[];
+  service_notes: ServiceNote[];
 }
 
 export interface ChangeLogEntry {
