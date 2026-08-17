@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { driverEvents, ticketCustomer } from "@/lib/selectors";
+import { formatPhoneInput } from "@/lib/phone";
 
 export default function AdminDriverEditPage() {
   return (
@@ -100,7 +101,7 @@ function AdminDriverEditContent() {
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
                 className={inputClass}
               />
             </label>

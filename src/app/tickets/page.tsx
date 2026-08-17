@@ -54,7 +54,7 @@ function TicketsContent() {
         const haystack = `${customer?.company_name ?? ""} ${site?.site_address ?? ""} ${
           t.dumpster_id ?? ""
         }`.toLowerCase();
-        return haystack.includes(query.trim().toLowerCase());
+        return haystack.includes(query.trim().toLowerCase().replace(/#/g, ""));
       })
       .sort((a, b) => (a.date_of_order < b.date_of_order ? 1 : -1));
   }, [tickets, sites, customers, filter, query]);

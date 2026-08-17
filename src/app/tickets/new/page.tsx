@@ -10,6 +10,8 @@ import { todayISO } from "@/lib/timer";
 import { formatPhoneInput } from "@/lib/phone";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
 import { parseCityState } from "@/lib/usStates";
+import { hasLeadingStreetNumber } from "@/lib/address";
+import { dateToISODate, formatDisplayDate } from "@/lib/calendarUtil";
 import { Customer, Site, Ticket, TicketType } from "@/lib/types";
 
 const emptyForm: NewTicketInput = {
@@ -30,6 +32,11 @@ const emptyForm: NewTicketInput = {
   notes: "",
   type: "residential",
 };
+
+function minRequestedDropDate(dateOfOrder: string): string {
+  const today = todayISO();
+  return dateOfOrder > today ? dateOfOrder : today;
+}
 
 const TYPE_OPTIONS: { value: TicketType; label: string }[] = (
   ["residential", "commercial", "live-load"] as const
@@ -102,6 +109,8 @@ function NewTicketForm() {
   );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [siteAddressError, setSiteAddressError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!form.company_name.trim() && !form.site_address.trim()) return;
@@ -147,6 +156,15 @@ function NewTicketForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    const addressInvalid = !hasLeadingStreetNumber(form.address);
+    const siteAddressInvalid = !hasLeadingStreetNumber(form.site_address);
+    setAddressError(addressInvalid ? "Enter a full street address, starting with the street number." : null);
+    setSiteAddressError(
+      siteAddressInvalid ? "Enter a full street address, starting with the street number." : null
+    );
+    if (addressInvalid || siteAddressInvalid) return;
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const id = saveTicketDraft(draftIdRef.current, form);
     finalizeTicketDraft(id);
@@ -168,11 +186,27 @@ function NewTicketForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <FormSection title="Order">
           <Field label="Date of Order">
-            <input
-              type="date"
+            <DatePicker
               required
               value={form.date_of_order}
-              onChange={(e) => update("date_of_order", e.target.value)}
+              onChange={(v) => {
+                setForm((f) => {
+                  const minDrop = minRequestedDropDate(v);
+                  return {
+                    ...f,
+                    date_of_order: v,
+                    requested_drop_date:
+                      f.requested_drop_date && f.requested_drop_date < minDrop
+                        ? ""
+                        : f.requested_drop_date,
+                  };
+                });
+              }}
+              confirmMessage={(day) =>
+                todayISO() !== dateToISODate(day)
+                  ? `Set the order date to ${formatDisplayDate(day)} instead of today?`
+                  : null
+              }
               className={inputClass}
             />
           </Field>
@@ -181,6 +215,7 @@ function NewTicketForm() {
               required
               value={form.requested_drop_date}
               onChange={(v) => update("requested_drop_date", v)}
+              minDate={minRequestedDropDate(form.date_of_order)}
               className={inputClass}
             />
           </Field>
@@ -270,10 +305,13 @@ function NewTicketForm() {
               />
             </Field>
           </div>
-          <Field label="Address">
+          <Field label="Address" error={addressError}>
             <AddressAutocomplete
               value={form.address}
-              onChange={(v) => update("address", v)}
+              onChange={(v) => {
+                update("address", v);
+                if (addressError) setAddressError(null);
+              }}
               onSelect={({ city, state }) => {
                 setForm((f) => ({ ...f, city: city ?? f.city, state: state ?? f.state }));
               }}
@@ -309,10 +347,13 @@ function NewTicketForm() {
         </FormSection>
 
         <FormSection title="Site Info">
-          <Field label="Site Address">
+          <Field label="Site Address" error={siteAddressError}>
             <AddressAutocomplete
               value={form.site_address}
-              onChange={(v) => update("site_address", v)}
+              onChange={(v) => {
+                update("site_address", v);
+                if (siteAddressError) setSiteAddressError(null);
+              }}
               className={inputClass}
               required
             />
@@ -404,11 +445,20 @@ function FormSection({ title, children }: { title: string; children: React.React
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string | null;
+  children: React.ReactNode;
+}) {
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-medium text-slate-700">{label}</span>
       {children}
+      {error && <span className="text-xs font-medium text-red-600">{error}</span>}
     </label>
   );
 }

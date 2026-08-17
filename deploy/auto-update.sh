@@ -21,5 +21,7 @@ fi
 
 echo "$(date -Is) updating $LOCAL -> $REMOTE"
 git pull origin "$BRANCH"
+export GIT_SHA="$(git rev-parse --short HEAD)"
+export BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 docker compose up -d --build
 echo "$(date -Is) deployed $REMOTE"

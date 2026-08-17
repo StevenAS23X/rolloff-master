@@ -407,6 +407,7 @@ function InvoiceForm({ ticketId }: { ticketId: string }) {
             required
             type="number"
             step="0.01"
+            min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className={inputClass}

@@ -263,6 +263,9 @@ function AdminTicketEditContent() {
             </Field>
             <Field label="Invoiceable Amount ($)">
               <input
+                type="number"
+                step="0.01"
+                min="0.01"
                 value={form.invoiceable_amount}
                 onChange={(e) => update("invoiceable_amount", e.target.value)}
                 className={inputClass}
