@@ -29,9 +29,12 @@ export interface Customer {
   id: string;
   company_name: string;
   contact_name: string;
-  address: string;
+  address: string; // street address line 1
+  address_line2: string;
+  address_line3: string;
   city: string;
   state: string;
+  zip: string;
   phone: string;
   email: string;
 }
@@ -39,7 +42,12 @@ export interface Customer {
 export interface Site {
   id: string;
   customer_id: string;
-  site_address: string;
+  site_address: string; // street address line 1
+  site_address_line2: string;
+  site_address_line3: string;
+  site_city: string;
+  site_state: string;
+  site_zip: string;
   site_contact_name: string;
   site_contact_phone: string;
 }

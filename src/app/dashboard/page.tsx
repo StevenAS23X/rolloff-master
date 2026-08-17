@@ -12,6 +12,7 @@ import { ticketCustomer } from "@/lib/selectors";
 import { Customer, Site, Ticket } from "@/lib/types";
 import { TimeAccelerator } from "@/components/TimeAccelerator";
 import { MONTH_LABELS, dateToISODate, formatDisplayDate, monthGridCells, parseISODateLocal } from "@/lib/calendarUtil";
+import { buildICS, IcsEvent } from "@/lib/ics";
 
 export default function DashboardPage() {
   return (
@@ -45,7 +46,9 @@ function DashboardContent() {
       if (!query.trim()) return true;
       const { site, customer } = ticketCustomer(t, sites, customers);
       const haystack = `${customer?.company_name ?? ""} ${customer?.address ?? ""} ${
-        site?.site_address ?? ""
+        customer?.city ?? ""
+      } ${customer?.zip ?? ""} ${site?.site_address ?? ""} ${site?.site_city ?? ""} ${
+        site?.site_zip ?? ""
       } ${t.dumpster_id ?? ""}`.toLowerCase();
       return haystack.includes(query.trim().toLowerCase().replace(/#/g, ""));
     });
@@ -437,15 +440,52 @@ function DispatchCalendar({
   const selectedDateObj = parseISODateLocal(selectedDate);
   const selectedEvents = eventsByDate.get(selectedDate) ?? [];
 
+  function handleExport() {
+    const icsEvents: IcsEvent[] = [];
+    for (const [date, evs] of eventsByDate) {
+      for (const ev of evs) {
+        const { site, customer } = ticketCustomer(ev.ticket, sites, customers);
+        icsEvents.push({
+          uid: `${ev.ticket.id}-${ev.type}@rolloff-tracker`,
+          date,
+          summary: `${EVENT_LABEL[ev.type]} — ${customer?.company_name ?? "Unknown customer"}`,
+          description: [site?.site_address, ev.ticket.dumpster_id ? `Box #${ev.ticket.dumpster_id}` : null]
+            .filter(Boolean)
+            .join(" · "),
+        });
+      }
+    }
+    const ics = buildICS(icsEvents, "Roll Off Tracker — Dispatch");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "rolloff-dispatch-calendar.ics";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
-        {(Object.keys(EVENT_LABEL) as CalendarEvent["type"][]).map((type) => (
-          <span key={type} className="flex items-center gap-1.5">
-            <span className={`h-2 w-2 rounded-full ${EVENT_DOT_COLOR[type]}`} />
-            {EVENT_LABEL[type]}
-          </span>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+          {(Object.keys(EVENT_LABEL) as CalendarEvent["type"][]).map((type) => (
+            <span key={type} className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${EVENT_DOT_COLOR[type]}`} />
+              {EVENT_LABEL[type]}
+            </span>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          title="Downloads a snapshot .ics file — open it in Calendar and choose 'Add All' to import. This is a one-time import, not a live-syncing subscription."
+        >
+          Export Calendar (.ics)
+        </button>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

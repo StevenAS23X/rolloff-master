@@ -10,6 +10,7 @@ import { TimerBadge } from "@/components/TimerBadge";
 import { InlineEditableText } from "@/components/InlineEditableText";
 import { ticketCustomer } from "@/lib/selectors";
 import { todayISO } from "@/lib/timer";
+import { formatAddress } from "@/lib/address";
 
 export default function TicketDetailPage() {
   return (
@@ -78,7 +79,18 @@ function TicketDetailContent() {
                 "Unknown customer"
               )}
             </h1>
-            <p className="text-sm text-slate-500">{site?.site_address}</p>
+            <p className="text-sm text-slate-500">
+              {site
+                ? formatAddress({
+                    line1: site.site_address,
+                    line2: site.site_address_line2,
+                    line3: site.site_address_line3,
+                    city: site.site_city,
+                    state: site.site_state,
+                    zip: site.site_zip,
+                  })
+                : ""}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <TicketStatusBadge status={ticket.status} />
@@ -116,7 +128,19 @@ function TicketDetailContent() {
             ["Contact", customer?.contact_name ?? "—"],
             ["Phone", customer?.phone ?? "—"],
             ["Email", customer?.email ?? "—"],
-            ["Billing Address", `${customer?.address ?? ""}, ${customer?.city ?? ""} ${customer?.state ?? ""}`],
+            [
+              "Billing Address",
+              customer
+                ? formatAddress({
+                    line1: customer.address,
+                    line2: customer.address_line2,
+                    line3: customer.address_line3,
+                    city: customer.city,
+                    state: customer.state,
+                    zip: customer.zip,
+                  })
+                : "—",
+            ],
             ["Site Contact", site?.site_contact_name ?? "—"],
             ["Site Contact Phone", site?.site_contact_phone ?? "—"],
           ]}

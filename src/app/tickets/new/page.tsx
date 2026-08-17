@@ -19,11 +19,19 @@ const emptyForm: NewTicketInput = {
   company_name: "",
   contact_name: "",
   address: "",
+  address_line2: "",
+  address_line3: "",
   city: "",
   state: "",
+  zip: "",
   phone: "",
   email: "",
   site_address: "",
+  site_address_line2: "",
+  site_address_line3: "",
+  site_city: "",
+  site_state: "",
+  site_zip: "",
   site_contact_name: "",
   site_contact_phone: "",
   requested_drop_date: "",
@@ -57,11 +65,19 @@ function buildDraftForm(
     company_name: customer?.company_name ?? "",
     contact_name: customer?.contact_name ?? "",
     address: customer?.address ?? "",
+    address_line2: customer?.address_line2 ?? "",
+    address_line3: customer?.address_line3 ?? "",
     city: customer?.city ?? "",
     state: customer?.state ?? "",
+    zip: customer?.zip ?? "",
     phone: customer?.phone ?? "",
     email: customer?.email ?? "",
     site_address: site?.site_address ?? "",
+    site_address_line2: site?.site_address_line2 ?? "",
+    site_address_line3: site?.site_address_line3 ?? "",
+    site_city: site?.site_city ?? "",
+    site_state: site?.site_state ?? "",
+    site_zip: site?.site_zip ?? "",
     site_contact_name: site?.site_contact_name ?? "",
     site_contact_phone: site?.site_contact_phone ?? "",
     requested_drop_date: ticket.requested_drop_date,
@@ -146,8 +162,11 @@ function NewTicketForm() {
       company_name: c.company_name,
       contact_name: c.contact_name,
       address: c.address,
+      address_line2: c.address_line2,
+      address_line3: c.address_line3,
       city: c.city,
       state: c.state,
+      zip: c.zip,
       phone: c.phone,
       email: c.email,
     }));
@@ -312,23 +331,45 @@ function NewTicketForm() {
                 update("address", v);
                 if (addressError) setAddressError(null);
               }}
-              onSelect={({ city, state }) => {
-                setForm((f) => ({ ...f, city: city ?? f.city, state: state ?? f.state }));
+              onSelect={({ city, state, zip }) => {
+                setForm((f) => ({
+                  ...f,
+                  city: city ?? f.city,
+                  state: state ?? f.state,
+                  zip: zip ?? f.zip,
+                }));
               }}
               onBlurValue={(v) => {
-                if (form.city.trim() && form.state.trim()) return;
+                if (form.city.trim() && form.state.trim() && form.zip.trim()) return;
                 const parsed = parseCityState(v);
-                if (!parsed.city && !parsed.state) return;
+                if (!parsed.city && !parsed.state && !parsed.zip) return;
                 setForm((f) => ({
                   ...f,
                   city: f.city.trim() ? f.city : parsed.city ?? f.city,
                   state: f.state.trim() ? f.state : parsed.state ?? f.state,
+                  zip: f.zip.trim() ? f.zip : parsed.zip ?? f.zip,
                 }));
               }}
               className={inputClass}
             />
           </Field>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Address Line 2">
+            <input
+              value={form.address_line2}
+              onChange={(e) => update("address_line2", e.target.value)}
+              placeholder="Suite, unit, floor, etc. (optional)"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Address Line 3">
+            <input
+              value={form.address_line3}
+              onChange={(e) => update("address_line3", e.target.value)}
+              placeholder="Optional"
+              className={inputClass}
+            />
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field label="City">
               <input
                 value={form.city}
@@ -343,6 +384,15 @@ function NewTicketForm() {
                 className={inputClass}
               />
             </Field>
+            <Field label="Zip Code">
+              <input
+                value={form.zip}
+                onChange={(e) => update("zip", e.target.value.replace(/[^\d-]/g, "").slice(0, 10))}
+                inputMode="numeric"
+                placeholder="33602"
+                className={inputClass}
+              />
+            </Field>
           </div>
         </FormSection>
 
@@ -354,10 +404,70 @@ function NewTicketForm() {
                 update("site_address", v);
                 if (siteAddressError) setSiteAddressError(null);
               }}
+              onSelect={({ city, state, zip }) => {
+                setForm((f) => ({
+                  ...f,
+                  site_city: city ?? f.site_city,
+                  site_state: state ?? f.site_state,
+                  site_zip: zip ?? f.site_zip,
+                }));
+              }}
+              onBlurValue={(v) => {
+                if (form.site_city.trim() && form.site_state.trim() && form.site_zip.trim()) return;
+                const parsed = parseCityState(v);
+                if (!parsed.city && !parsed.state && !parsed.zip) return;
+                setForm((f) => ({
+                  ...f,
+                  site_city: f.site_city.trim() ? f.site_city : parsed.city ?? f.site_city,
+                  site_state: f.site_state.trim() ? f.site_state : parsed.state ?? f.site_state,
+                  site_zip: f.site_zip.trim() ? f.site_zip : parsed.zip ?? f.site_zip,
+                }));
+              }}
               className={inputClass}
               required
             />
           </Field>
+          <Field label="Site Address Line 2">
+            <input
+              value={form.site_address_line2}
+              onChange={(e) => update("site_address_line2", e.target.value)}
+              placeholder="Suite, unit, floor, etc. (optional)"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Site Address Line 3">
+            <input
+              value={form.site_address_line3}
+              onChange={(e) => update("site_address_line3", e.target.value)}
+              placeholder="Optional"
+              className={inputClass}
+            />
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field label="Site City">
+              <input
+                value={form.site_city}
+                onChange={(e) => update("site_city", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Site State">
+              <input
+                value={form.site_state}
+                onChange={(e) => update("site_state", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Site Zip Code">
+              <input
+                value={form.site_zip}
+                onChange={(e) => update("site_zip", e.target.value.replace(/[^\d-]/g, "").slice(0, 10))}
+                inputMode="numeric"
+                placeholder="33602"
+                className={inputClass}
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Site Contact Name">
               <input
