@@ -6,17 +6,22 @@ import { toStateAbbreviation } from "@/lib/usStates";
 interface Suggestion {
   display_name: string;
   address?: {
+    house_number?: string;
+    road?: string;
     city?: string;
     town?: string;
     village?: string;
     hamlet?: string;
     state?: string;
+    postcode?: string;
   };
 }
 
 export interface AddressSelection {
+  line1?: string;
   city?: string;
   state?: string;
+  zip?: string;
 }
 
 export function AddressAutocomplete({
@@ -102,10 +107,14 @@ export function AddressAutocomplete({
               <button
                 type="button"
                 onClick={() => {
-                  onChange(s.display_name);
+                  const line1 =
+                    [s.address?.house_number, s.address?.road].filter(Boolean).join(" ") ||
+                    s.display_name.split(",")[0].trim();
+                  onChange(line1);
                   const city = s.address?.city ?? s.address?.town ?? s.address?.village ?? s.address?.hamlet;
                   const state = s.address?.state ? toStateAbbreviation(s.address.state) : undefined;
-                  if (city || state) onSelect?.({ city, state });
+                  const zip = s.address?.postcode;
+                  if (city || state || zip) onSelect?.({ line1, city, state, zip });
                   setSuggestions([]);
                   setOpen(false);
                 }}

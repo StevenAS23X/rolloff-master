@@ -6,11 +6,14 @@ import { useStore, useCurrentAccount } from "@/lib/store";
 import { DumpsterIcon } from "@/components/DumpsterIcon";
 
 const LINKS = [
-  { href: "/dashboard", label: "Dashboard", adminOnly: false },
-  { href: "/tickets", label: "Tickets", adminOnly: false },
-  { href: "/dumpsters", label: "Dumpsters", adminOnly: false },
-  { href: "/customers", label: "Customers", adminOnly: false },
-  { href: "/admin", label: "Admin", adminOnly: true },
+  { href: "/dashboard", label: "Dashboard", adminOnly: false, desktopOnly: false },
+  { href: "/tickets", label: "Tickets", adminOnly: false, desktopOnly: false },
+  { href: "/dumpsters", label: "Dumpsters", adminOnly: false, desktopOnly: false },
+  { href: "/customers", label: "Customers", adminOnly: false, desktopOnly: false },
+  // Admin's Excel-like editing tables aren't built for a phone screen — see the matching
+  // md:hidden gate on the /admin page itself, which is the part that actually matters (this
+  // just keeps the link from showing up on mobile in the first place).
+  { href: "/admin", label: "Admin", adminOnly: true, desktopOnly: true },
 ];
 
 export function Nav() {
@@ -57,6 +60,8 @@ export function Nav() {
                 key={link.href}
                 href={link.href}
                 className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  link.desktopOnly ? "hidden md:inline-block" : ""
+                } ${
                   active
                     ? "bg-slate-900 text-white"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"

@@ -7,6 +7,7 @@ import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
 import { getSite, ticketsForCustomer } from "@/lib/selectors";
+import { formatAddress } from "@/lib/address";
 import { Ticket, Site } from "@/lib/types";
 
 export default function CustomerDetailPage() {
@@ -65,7 +66,14 @@ function CustomerDetailContent() {
           <Field label="Email" value={customer.email || "—"} />
           <Field
             label="Address"
-            value={`${customer.address}, ${customer.city} ${customer.state}`}
+            value={formatAddress({
+              line1: customer.address,
+              line2: customer.address_line2,
+              line3: customer.address_line3,
+              city: customer.city,
+              state: customer.state,
+              zip: customer.zip,
+            })}
           />
         </dl>
       </InfoCard>

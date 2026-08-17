@@ -50,11 +50,19 @@ export interface NewTicketInput {
   company_name: string;
   contact_name: string;
   address: string;
+  address_line2: string;
+  address_line3: string;
   city: string;
   state: string;
+  zip: string;
   phone: string;
   email: string;
   site_address: string;
+  site_address_line2: string;
+  site_address_line3: string;
+  site_city: string;
+  site_state: string;
+  site_zip: string;
   site_contact_name: string;
   site_contact_phone: string;
   requested_drop_date: string;
@@ -147,8 +155,11 @@ export const useStore = create<RolloffState>()(
             company_name: input.company_name,
             contact_name: input.contact_name,
             address: input.address,
+            address_line2: input.address_line2,
+            address_line3: input.address_line3,
             city: input.city,
             state: input.state,
+            zip: input.zip,
             phone: input.phone,
             email: input.email,
           };
@@ -181,8 +192,11 @@ export const useStore = create<RolloffState>()(
               company_name: input.company_name,
               contact_name: input.contact_name,
               address: input.address,
+              address_line2: input.address_line2,
+              address_line3: input.address_line3,
               city: input.city,
               state: input.state,
+              zip: input.zip,
               phone: input.phone,
               email: input.email,
             };
@@ -193,8 +207,11 @@ export const useStore = create<RolloffState>()(
               company_name: input.company_name,
               contact_name: input.contact_name,
               address: input.address,
+              address_line2: input.address_line2,
+              address_line3: input.address_line3,
               city: input.city,
               state: input.state,
+              zip: input.zip,
               phone: input.phone,
               email: input.email,
             };
@@ -209,6 +226,11 @@ export const useStore = create<RolloffState>()(
             ...existingSite,
             customer_id: customer.id,
             site_address: input.site_address,
+            site_address_line2: input.site_address_line2,
+            site_address_line3: input.site_address_line3,
+            site_city: input.site_city,
+            site_state: input.site_state,
+            site_zip: input.site_zip,
             site_contact_name: input.site_contact_name,
             site_contact_phone: input.site_contact_phone,
           };
@@ -218,6 +240,11 @@ export const useStore = create<RolloffState>()(
             id: newId("site"),
             customer_id: customer.id,
             site_address: input.site_address,
+            site_address_line2: input.site_address_line2,
+            site_address_line3: input.site_address_line3,
+            site_city: input.site_city,
+            site_state: input.site_state,
+            site_zip: input.site_zip,
             site_contact_name: input.site_contact_name,
             site_contact_phone: input.site_contact_phone,
           };
@@ -428,7 +455,7 @@ export const useStore = create<RolloffState>()(
     }),
     {
       name: "rolloff-data",
-      version: 4,
+      version: 5,
       migrate: (persistedState) => {
         const state = persistedState as Partial<RolloffState>;
         if (Array.isArray(state.dumpsters)) {
@@ -445,6 +472,30 @@ export const useStore = create<RolloffState>()(
         if (!Array.isArray(state.changeLog)) state.changeLog = [];
         if (typeof state.timeOffsetMs !== "number") state.timeOffsetMs = 0;
         if (!Array.isArray(state.drivers)) state.drivers = seedDrivers;
+        if (Array.isArray(state.customers)) {
+          state.customers = state.customers.map((c) => {
+            const raw = c as Partial<Customer>;
+            return {
+              ...c,
+              address_line2: raw.address_line2 ?? "",
+              address_line3: raw.address_line3 ?? "",
+              zip: raw.zip ?? "",
+            };
+          });
+        }
+        if (Array.isArray(state.sites)) {
+          state.sites = state.sites.map((s) => {
+            const raw = s as Partial<Site>;
+            return {
+              ...s,
+              site_address_line2: raw.site_address_line2 ?? "",
+              site_address_line3: raw.site_address_line3 ?? "",
+              site_city: raw.site_city ?? "",
+              site_state: raw.site_state ?? "",
+              site_zip: raw.site_zip ?? "",
+            };
+          });
+        }
         return state;
       },
       onRehydrateStorage: () => (state) => {
