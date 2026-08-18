@@ -1,4 +1,4 @@
-import { Customer, Site, Ticket } from "./types";
+import { Account, AccountPermissions, Customer, Site, Ticket } from "./types";
 
 export function getSite(sites: Site[], siteId: string): Site | undefined {
   return sites.find((s) => s.id === siteId);
@@ -16,6 +16,16 @@ export function ticketCustomer(
   const site = getSite(sites, ticket.site_id);
   const customer = site ? getCustomer(customers, site.customer_id) : undefined;
   return { site, customer };
+}
+
+/** Admins always have every permission; everyone else needs it explicitly granted. */
+export function hasPermission(
+  account: Account | null | undefined,
+  key: keyof AccountPermissions
+): boolean {
+  if (!account) return false;
+  if (account.role === "admin") return true;
+  return account.permissions?.[key] === true;
 }
 
 export function activeTicketForDumpster(tickets: Ticket[], dumpsterId: string): Ticket | undefined {

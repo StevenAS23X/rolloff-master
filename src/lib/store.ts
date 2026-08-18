@@ -1,8 +1,29 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useEffect, useState } from "react";
-import { Account, ChangeLogEntry, Customer, Driver, Dumpster, DumpsterStatus, Site, Ticket } from "./types";
-import { seedAccounts, seedCustomers, seedDrivers, seedDumpsters, seedSites, seedTickets } from "./seed";
+import {
+  Account,
+  AccountPermissions,
+  ChangeLogEntry,
+  CompanyInfo,
+  Customer,
+  Driver,
+  Dumpster,
+  DumpsterStatus,
+  FeatureFlags,
+  Site,
+  Ticket,
+} from "./types";
+import {
+  defaultCompanyInfo,
+  defaultFeatureFlags,
+  seedAccounts,
+  seedCustomers,
+  seedDrivers,
+  seedDumpsters,
+  seedSites,
+  seedTickets,
+} from "./seed";
 
 function newId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
@@ -83,6 +104,8 @@ interface RolloffState {
   changeLog: ChangeLogEntry[];
   hasHydrated: boolean;
   timeOffsetMs: number;
+  companyInfo: CompanyInfo;
+  featureFlags: FeatureFlags;
   login: (userId: string) => void;
   logout: () => void;
   setHasHydrated: (v: boolean) => void;
@@ -111,6 +134,11 @@ interface RolloffState {
   updateTicketFields: (id: string, patch: Partial<Ticket>) => void;
   adminUpdateTicket: (id: string, patch: Partial<Ticket>, changedBy: string) => void;
   updateCustomerFields: (id: string, patch: Partial<Customer>) => void;
+  mergeCustomers: (keepId: string, mergeId: string, changedBy: string) => void;
+  reassignTicketCustomer: (ticketId: string, targetCustomerId: string, changedBy: string) => void;
+  updateCompanyInfo: (patch: Partial<CompanyInfo>) => void;
+  setFeatureFlag: (key: keyof FeatureFlags, value: boolean) => void;
+  updateAccountPermissions: (accountId: string, patch: Partial<AccountPermissions>) => void;
 }
 
 export const useStore = create<RolloffState>()(
@@ -126,6 +154,8 @@ export const useStore = create<RolloffState>()(
       changeLog: [],
       hasHydrated: false,
       timeOffsetMs: 0,
+      companyInfo: defaultCompanyInfo,
+      featureFlags: defaultFeatureFlags,
       login: (userId) => set({ currentUserId: userId }),
       logout: () => set({ currentUserId: null }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
@@ -452,10 +482,88 @@ export const useStore = create<RolloffState>()(
           customers: state.customers.map((c) => (c.id === id ? { ...c, ...patch } : c)),
         });
       },
+
+      mergeCustomers: (keepId, mergeId, changedBy) => {
+        const state = get();
+        if (keepId === mergeId) return;
+        const keep = state.customers.find((c) => c.id === keepId);
+        const merged = state.customers.find((c) => c.id === mergeId);
+        if (!keep || !merged) return;
+        const movedSites = state.sites.filter((s) => s.customer_id === mergeId).length;
+        set({
+          sites: state.sites.map((s) => (s.customer_id === mergeId ? { ...s, customer_id: keepId } : s)),
+          customers: state.customers.filter((c) => c.id !== mergeId),
+          changeLog: [
+            ...state.changeLog,
+            {
+              id: newId("log"),
+              entityType: "customer",
+              entityId: keepId,
+              field: "merged_customer",
+              oldValue: `${merged.company_name} (${movedSites} site${movedSites === 1 ? "" : "s"} moved)`,
+              newValue: keep.company_name,
+              changedBy,
+              changedAt: new Date().toISOString(),
+            },
+          ],
+        });
+      },
+
+      reassignTicketCustomer: (ticketId, targetCustomerId, changedBy) => {
+        const state = get();
+        const ticket = state.tickets.find((t) => t.id === ticketId);
+        if (!ticket) return;
+        const currentSite = state.sites.find((s) => s.id === ticket.site_id);
+        if (!currentSite) return;
+        const targetCustomer = state.customers.find((c) => c.id === targetCustomerId);
+        if (!targetCustomer) return;
+        const fromCustomer = state.customers.find((c) => c.id === currentSite.customer_id);
+
+        // Clone the site under the new customer rather than repointing it in place — the
+        // original site (and any other tickets on it) stays with the original customer.
+        const newSite: Site = { ...currentSite, id: newId("site"), customer_id: targetCustomerId };
+
+        set({
+          sites: [...state.sites, newSite],
+          tickets: state.tickets.map((t) => (t.id === ticketId ? { ...t, site_id: newSite.id } : t)),
+          changeLog: [
+            ...state.changeLog,
+            {
+              id: newId("log"),
+              entityType: "ticket",
+              entityId: ticketId,
+              field: "customer",
+              oldValue: fromCustomer?.company_name ?? "Unknown",
+              newValue: targetCustomer.company_name,
+              changedBy,
+              changedAt: new Date().toISOString(),
+            },
+          ],
+        });
+      },
+
+      updateCompanyInfo: (patch) => {
+        const state = get();
+        set({ companyInfo: { ...state.companyInfo, ...patch } });
+      },
+
+      setFeatureFlag: (key, value) => {
+        const state = get();
+        set({ featureFlags: { ...state.featureFlags, [key]: value } });
+      },
+
+      updateAccountPermissions: (accountId, patch) => {
+        const state = get();
+        set({
+          accounts: state.accounts.map((a) =>
+            a.id === accountId ? { ...a, permissions: { ...a.permissions, ...patch } } : a
+          ),
+        });
+      },
     }),
     {
       name: "rolloff-data",
-      version: 5,
+      version: 6,
       migrate: (persistedState) => {
         const state = persistedState as Partial<RolloffState>;
         if (Array.isArray(state.dumpsters)) {
@@ -495,6 +603,12 @@ export const useStore = create<RolloffState>()(
               site_zip: raw.site_zip ?? "",
             };
           });
+        }
+        if (!state.companyInfo) state.companyInfo = defaultCompanyInfo;
+        if (!state.featureFlags) {
+          state.featureFlags = defaultFeatureFlags;
+        } else {
+          state.featureFlags = { ...defaultFeatureFlags, ...state.featureFlags };
         }
         return state;
       },

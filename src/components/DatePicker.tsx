@@ -85,10 +85,10 @@ export function DatePicker({
         }}
         className={`${className ?? ""} flex cursor-pointer items-center justify-between text-left`}
       >
-        <span className={selected ? "text-slate-900" : "text-slate-400"}>
+        <span className={selected ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}>
           {selected ? formatDisplay(selected) : "Select a date..."}
         </span>
-        <span aria-hidden className="text-slate-400">📅</span>
+        <span aria-hidden className="text-slate-400 dark:text-slate-500">📅</span>
       </div>
       {/* Kept in the layout (not display:none) so native form validation still fires on submit. */}
       <input tabIndex={-1} aria-hidden required={required} value={value} readOnly className="sr-only" />
@@ -96,28 +96,28 @@ export function DatePicker({
       {open && (
         <div
           data-testid="date-picker-popover"
-          className="absolute z-20 mt-1 w-72 rounded-md border border-slate-200 bg-white p-3 shadow-lg"
+          className="absolute z-20 mt-1 w-72 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-lg"
         >
           <div className="mb-2 flex items-center justify-between">
             <button
               type="button"
               onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}
-              className="rounded px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100"
+              className="rounded px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               ‹
             </button>
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
             </span>
             <button
               type="button"
               onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}
-              className="rounded px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100"
+              className="rounded px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               ›
             </button>
           </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400">
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400 dark:text-slate-500">
             {WEEKDAY_LABELS.map((w, i) => (
               <span key={i} className="py-1">
                 {w}
@@ -140,10 +140,10 @@ export function DatePicker({
                     isSelected
                       ? "bg-slate-900 font-semibold text-white"
                       : isDisabled
-                      ? "cursor-not-allowed text-slate-200"
+                      ? "cursor-not-allowed text-slate-200 dark:text-slate-700"
                       : isToday
-                      ? "font-semibold text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-100"
-                      : "text-slate-700 hover:bg-slate-100"
+                      ? "font-semibold text-slate-900 dark:text-slate-100 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                   }`}
                 >
                   {day.getDate()}
@@ -157,14 +157,14 @@ export function DatePicker({
       {pendingDay &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl">
-              <h3 className="text-base font-semibold text-slate-900">Confirm date</h3>
-              <p className="mt-2 text-sm text-slate-600">{pendingDay.message}</p>
+            <div className="w-full max-w-sm rounded-lg bg-white dark:bg-slate-900 p-5 shadow-xl">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Confirm date</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{pendingDay.message}</p>
               <div className="mt-4 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setPendingDay(null)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>

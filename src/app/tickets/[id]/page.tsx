@@ -8,7 +8,7 @@ import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
 import { InlineEditableText } from "@/components/InlineEditableText";
-import { ticketCustomer } from "@/lib/selectors";
+import { hasPermission, ticketCustomer } from "@/lib/selectors";
 import { todayISO } from "@/lib/timer";
 import { formatAddress } from "@/lib/address";
 
@@ -34,22 +34,22 @@ function TicketDetailContent() {
 
   if (!ticket) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
-        <p className="text-slate-500">Ticket not found.</p>
-        <Link href="/tickets" className="mt-2 inline-block text-sm font-medium text-slate-700 underline">
+      <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
+        <p className="text-slate-500 dark:text-slate-400">Ticket not found.</p>
+        <Link href="/tickets" className="mt-2 inline-block text-sm font-medium text-slate-700 dark:text-slate-300 underline">
           Back to tickets
         </Link>
       </div>
     );
   }
 
-  if (ticket.status === "archived" && account?.role !== "admin") {
+  if (ticket.status === "archived" && !hasPermission(account, "viewArchived")) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
-        <p className="text-slate-500">
-          This ticket is archived. Archived tickets are only visible to Admin.
+      <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
+        <p className="text-slate-500 dark:text-slate-400">
+          This ticket is archived. You don&apos;t have permission to view archived tickets.
         </p>
-        <Link href="/tickets" className="mt-2 inline-block text-sm font-medium text-slate-700 underline">
+        <Link href="/tickets" className="mt-2 inline-block text-sm font-medium text-slate-700 dark:text-slate-300 underline">
           Back to tickets
         </Link>
       </div>
@@ -64,13 +64,13 @@ function TicketDetailContent() {
       <div>
         <button
           onClick={() => router.push("/tickets")}
-          className="mb-3 text-sm font-medium text-slate-500 hover:text-slate-800"
+          className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
         >
           ← Back to tickets
         </button>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
               {customer ? (
                 <Link href={`/customers/${customer.id}`} className="hover:underline">
                   {customer.company_name}
@@ -79,7 +79,7 @@ function TicketDetailContent() {
                 "Unknown customer"
               )}
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {site
                 ? formatAddress({
                     line1: site.site_address,
@@ -110,7 +110,7 @@ function TicketDetailContent() {
           ]}
         />
         <div className="mt-3">
-          <p className="mb-1 text-xs font-medium text-slate-400">
+          <p className="mb-1 text-xs font-medium text-slate-400 dark:text-slate-500">
             Notes {account ? "(click to edit)" : ""}
           </p>
           <InlineEditableText
@@ -177,7 +177,7 @@ function TicketDetailContent() {
 
       {ticket.status === "draft" && (
         <InfoCard title="Draft">
-          <p className="mb-3 text-sm text-slate-600">
+          <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
             This ticket hasn&apos;t been finished yet. Pick up where you left off to turn it into
             a real order.
           </p>
@@ -198,8 +198,8 @@ function TicketDetailContent() {
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{title}</h2>
       {children}
     </div>
   );
@@ -210,8 +210,8 @@ function InfoGrid({ items }: { items: [string, string][] }) {
     <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {items.map(([label, value]) => (
         <div key={label}>
-          <dt className="text-xs font-medium text-slate-400">{label}</dt>
-          <dd className="text-sm text-slate-800">{value}</dd>
+          <dt className="text-xs font-medium text-slate-400 dark:text-slate-500">{label}</dt>
+          <dd className="text-sm text-slate-800 dark:text-slate-200">{value}</dd>
         </div>
       ))}
     </dl>
@@ -219,19 +219,22 @@ function InfoGrid({ items }: { items: [string, string][] }) {
 }
 
 const inputClass =
-  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
+  "w-full rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
 
 function DriverField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const drivers = useStore((s) => s.drivers);
+  const requireFromRoster = useStore((s) => s.featureFlags.requireDriverFromRoster);
   const activeDrivers = drivers.filter((d) => d.active);
 
-  if (activeDrivers.length === 0) {
+  if (activeDrivers.length === 0 || !requireFromRoster) {
     return (
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-slate-700">Driver</span>
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Driver</span>
         <input required value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} />
-        <span className="text-xs text-slate-400">
-          No drivers on file yet — add one under Admin → Drivers to select from a list next time.
+        <span className="text-xs text-slate-400 dark:text-slate-500">
+          {activeDrivers.length === 0
+            ? "No drivers on file yet — add one under Admin → Drivers to select from a list next time."
+            : "Typing a driver name freely — Company Settings can require picking from the roster instead."}
         </span>
       </label>
     );
@@ -239,7 +242,7 @@ function DriverField({ value, onChange }: { value: string; onChange: (value: str
 
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-slate-700">Driver</span>
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Driver</span>
       <select required value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
         <option value="" disabled>
           Select a driver...
@@ -287,7 +290,7 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
     <InfoCard title="Box Dropped">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Yardage Needed</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Yardage Needed</span>
           <select
             value={yardage}
             onChange={(e) => {
@@ -304,7 +307,7 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
           </select>
         </label>
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             {usingFallback
               ? `Box Number (no idle ${yardage}yd boxes — showing other idle sizes)`
               : "Box Number (idle, matching size)"}
@@ -322,8 +325,8 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
                     selected
                       ? "border-slate-900 bg-slate-900 text-white"
                       : matches
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                      : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100"
+                      : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   #{d.id} · {d.size_yards}yd
@@ -332,11 +335,11 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
             })}
           </div>
           {idleDumpsters.length === 0 && (
-            <span className="text-xs text-red-600">No idle dumpsters available.</span>
+            <span className="text-xs text-red-600 dark:text-red-400">No idle dumpsters available.</span>
           )}
         </div>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Drop Date</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Drop Date</span>
           <input
             type="date"
             required
@@ -346,7 +349,7 @@ function DropForm({ ticketId, requestedSize }: { ticketId: string; requestedSize
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Where it was placed</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Where it was placed</span>
           <input
             required
             value={description}
@@ -382,7 +385,7 @@ function PickupForm({ ticketId }: { ticketId: string }) {
     <InfoCard title="Box Picked Up">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Pickup Date</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Pickup Date</span>
           <input
             type="date"
             required
@@ -417,7 +420,7 @@ function InvoiceForm({ ticketId }: { ticketId: string }) {
     <InfoCard title="Invoice">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Invoice Number</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Invoice Number</span>
           <input
             required
             value={invoiceNumber}
@@ -426,7 +429,7 @@ function InvoiceForm({ ticketId }: { ticketId: string }) {
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Invoiceable Amount ($)</span>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Invoiceable Amount ($)</span>
           <input
             required
             type="number"

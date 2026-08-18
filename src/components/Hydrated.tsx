@@ -8,7 +8,7 @@ export function Hydrated({ children }: { children: ReactNode }) {
 
   if (!hasHydrated) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400 dark:text-slate-500">
         Loading…
       </div>
     );

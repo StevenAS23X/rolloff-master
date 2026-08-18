@@ -33,11 +33,11 @@ export function TimeAccelerator() {
   const now = useOffsetNow();
 
   return (
-    <div className="rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 p-4">
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+    <div className="rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/30">
+      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
         Temporary — Testing Only (will be removed)
       </p>
-      <p className="mb-3 text-sm text-amber-800">
+      <p className="mb-3 text-sm text-amber-800 dark:text-amber-300">
         Fast-forward the simulated clock to check timers and overdue highlighting without
         waiting for real days to pass.
       </p>
@@ -46,7 +46,7 @@ export function TimeAccelerator() {
           <button
             key={j.label}
             onClick={() => setTimeOffsetMs(timeOffsetMs + j.ms)}
-            className="rounded-md border border-amber-400 bg-white px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100"
+            className="rounded-md border border-amber-400 bg-white px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 dark:border-amber-700 dark:bg-slate-900 dark:text-amber-300 dark:hover:bg-amber-900/40"
           >
             {j.label}
           </button>
@@ -57,16 +57,16 @@ export function TimeAccelerator() {
         >
           Reset to Now
         </button>
-        <span className="ml-auto text-sm text-amber-800">
+        <span className="ml-auto text-sm text-amber-800 dark:text-amber-300">
           Simulated date: <strong>{now.toLocaleString()}</strong>
         </span>
       </div>
 
-      <div className="mt-4 border-t border-amber-200 pt-3">
-        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+      <div className="mt-4 border-t border-amber-200 pt-3 dark:border-amber-800">
+        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
           Known Issues &amp; Limitations
         </p>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-amber-800">
+        <ul className="list-disc space-y-1 pl-5 text-sm text-amber-800 dark:text-amber-300">
           {KNOWN_ISSUES.map((issue) => (
             <li key={issue}>{issue}</li>
           ))}
