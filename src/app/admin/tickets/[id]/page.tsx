@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { ticketCustomer } from "@/lib/selectors";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
-import { Ticket, TicketStatus, TicketType } from "@/lib/types";
+import { Customer, Ticket, TicketStatus, TicketType } from "@/lib/types";
 
 const STATUS_OPTIONS: TicketStatus[] = [
   "draft",
@@ -64,17 +65,17 @@ function AdminTicketEditContent() {
 
   if (account?.role !== "admin") {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
-        <p className="text-slate-500">Admin access only.</p>
+      <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
+        <p className="text-slate-500 dark:text-slate-400">Admin access only.</p>
       </div>
     );
   }
 
   if (!ticket || !form) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
-        <p className="text-slate-500">Ticket not found.</p>
-        <Link href="/admin" className="mt-2 inline-block text-sm font-medium text-slate-700 underline">
+      <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-8 text-center">
+        <p className="text-slate-500 dark:text-slate-400">Ticket not found.</p>
+        <Link href="/admin" className="mt-2 inline-block text-sm font-medium text-slate-700 dark:text-slate-300 underline">
           Back to admin
         </Link>
       </div>
@@ -102,14 +103,14 @@ function AdminTicketEditContent() {
       <div>
         <button
           onClick={() => router.push("/admin")}
-          className="mb-3 text-sm font-medium text-slate-500 hover:text-slate-800"
+          className="mb-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
         >
           ← Back to admin
         </button>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
           Edit Ticket — {customer?.company_name ?? "Unknown customer"}
         </h1>
-        <p className="text-sm text-slate-500">{site?.site_address}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{site?.site_address}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -245,7 +246,7 @@ function AdminTicketEditContent() {
         </FormSection>
 
         <FormSection title="Invoicing">
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
             <input
               type="checkbox"
               checked={form.invoiced}
@@ -275,7 +276,7 @@ function AdminTicketEditContent() {
         </FormSection>
 
         <div className="flex items-center justify-end gap-3">
-          {savedFlash && <span className="text-sm font-medium text-emerald-600">Saved</span>}
+          {savedFlash && <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Saved</span>}
           <button
             type="submit"
             className="rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700"
@@ -285,23 +286,32 @@ function AdminTicketEditContent() {
         </div>
       </form>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+      {customer && (
+        <ReassignCustomerPanel
+          ticketId={ticketId}
+          currentCustomer={customer}
+          customers={customers}
+          accountName={account.name}
+        />
+      )}
+
+      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           Change Log
         </h2>
         {entries.length === 0 ? (
-          <p className="text-sm text-slate-400">No edits logged yet.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">No edits logged yet.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {entries
               .slice()
               .sort((a, b) => (a.changedAt < b.changedAt ? 1 : -1))
               .map((entry) => (
-                <li key={entry.id} className="text-sm text-slate-700">
+                <li key={entry.id} className="text-sm text-slate-700 dark:text-slate-300">
                   <span className="font-medium">{FIELD_LABELS[entry.field] ?? entry.field}</span>{" "}
-                  changed from <span className="text-slate-500">&quot;{entry.oldValue || "—"}&quot;</span>{" "}
-                  to <span className="text-slate-900">&quot;{entry.newValue || "—"}&quot;</span>
-                  <span className="text-slate-400">
+                  changed from <span className="text-slate-500 dark:text-slate-400">&quot;{entry.oldValue || "—"}&quot;</span>{" "}
+                  to <span className="text-slate-900 dark:text-slate-100">&quot;{entry.newValue || "—"}&quot;</span>
+                  <span className="text-slate-400 dark:text-slate-500">
                     {" "}
                     — {entry.changedBy}, {new Date(entry.changedAt).toLocaleString()}
                   </span>
@@ -315,12 +325,12 @@ function AdminTicketEditContent() {
 }
 
 const inputClass =
-  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
+  "w-full rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {title}
       </h2>
       <div className="flex flex-col gap-4">{children}</div>
@@ -331,8 +341,113 @@ function FormSection({ title, children }: { title: string; children: React.React
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
       {children}
     </label>
+  );
+}
+
+function ReassignCustomerPanel({
+  ticketId,
+  currentCustomer,
+  customers,
+  accountName,
+}: {
+  ticketId: string;
+  currentCustomer: Customer;
+  customers: Customer[];
+  accountName: string;
+}) {
+  const reassignTicketCustomer = useStore((s) => s.reassignTicketCustomer);
+  const [targetId, setTargetId] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
+  const target = customers.find((c) => c.id === targetId);
+  const canReassign = Boolean(targetId);
+
+  function handleConfirm() {
+    if (!canReassign) return;
+    reassignTicketCustomer(ticketId, targetId, accountName);
+    setConfirming(false);
+    setTargetId("");
+  }
+
+  const options = customers
+    .filter((c) => c.id !== currentCustomer.id)
+    .slice()
+    .sort((a, b) => a.company_name.localeCompare(b.company_name));
+
+  return (
+    <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50/40 dark:bg-red-950/40 p-4">
+      <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-red-700 dark:text-red-400">
+        Reassign to a Different Customer
+      </h2>
+      <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+        Moves this one ticket to another customer, keeping its site address and contact details.
+        Other tickets for {currentCustomer.company_name} are not affected.
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex min-w-[200px] flex-1 flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Move to</span>
+          <select value={targetId} onChange={(e) => setTargetId(e.target.value)} className={inputClass}>
+            <option value="">Select a customer...</option>
+            {options.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.company_name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          disabled={!canReassign}
+          onClick={() => setConfirming(true)}
+          className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Reassign Ticket
+        </button>
+      </div>
+
+      {confirming &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-lg bg-white dark:bg-slate-900 p-5 shadow-xl">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Confirm reassignment</h3>
+              <p className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">
+                This change is not reversible — please make sure all information is correct before
+                proceeding.
+              </p>
+              <div className="mt-3 rounded-md bg-slate-50 dark:bg-slate-950 p-3 text-sm text-slate-700 dark:text-slate-300">
+                <p>
+                  Ticket will move from <strong>{currentCustomer.company_name}</strong> to{" "}
+                  <strong>{target?.company_name}</strong>.
+                </p>
+                <p className="mt-2">
+                  Site address and contact details stay the same — a new site record is created
+                  under {target?.company_name} so {currentCustomer.company_name}&apos;s other
+                  tickets aren&apos;t affected.
+                </p>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Yes, reassign ticket
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
   );
 }

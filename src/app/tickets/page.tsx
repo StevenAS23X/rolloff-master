@@ -7,7 +7,7 @@ import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
-import { ticketCustomer } from "@/lib/selectors";
+import { hasPermission, ticketCustomer } from "@/lib/selectors";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
 import { TicketStatus } from "@/lib/types";
 
@@ -35,15 +35,15 @@ function TicketsContent() {
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
   const account = useCurrentAccount();
-  const isAdmin = account?.role === "admin";
+  const canViewArchived = hasPermission(account, "viewArchived");
   const [filter, setFilter] = useState<TicketStatus | "all">("all");
   const [query, setQuery] = useState("");
 
   const tickets = useMemo(
-    () => (isAdmin ? allTickets : allTickets.filter((t) => t.status !== "archived")),
-    [allTickets, isAdmin]
+    () => (canViewArchived ? allTickets : allTickets.filter((t) => t.status !== "archived")),
+    [allTickets, canViewArchived]
   );
-  const filters = isAdmin ? [...BASE_FILTERS, ARCHIVED_FILTER] : BASE_FILTERS;
+  const filters = canViewArchived ? [...BASE_FILTERS, ARCHIVED_FILTER] : BASE_FILTERS;
 
   const filtered = useMemo(() => {
     return tickets
@@ -62,7 +62,7 @@ function TicketsContent() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-900">Tickets</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tickets</h1>
         <Link
           href="/tickets/new"
           className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
@@ -72,7 +72,7 @@ function TicketsContent() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-1">
+        <div className="flex flex-wrap gap-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
           {filters.map((f) => (
             <button
               key={f.value}
@@ -80,7 +80,7 @@ function TicketsContent() {
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 filter === f.value
                   ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
               {f.label}
@@ -91,15 +91,15 @@ function TicketsContent() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search customer, site, box #..."
-          className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="min-w-[220px] flex-1 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm"
         />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
         {/* Table layout for wider screens — seven columns can't wrap on a phone. */}
         <div className="hidden overflow-x-auto sm:block">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-2">Order Date</th>
                 <th className="px-4 py-2">Customer</th>
@@ -110,24 +110,24 @@ function TicketsContent() {
                 <th className="px-4 py-2">Timer</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.map((ticket) => {
                 const { site, customer } = ticketCustomer(ticket, sites, customers);
                 return (
                   <tr
                     key={ticket.id}
                     onClick={() => router.push(`/tickets/${ticket.id}`)}
-                    className="cursor-pointer hover:bg-slate-50"
+                    className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
-                    <td className="px-4 py-3 text-slate-600">{ticket.date_of_order}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{ticket.date_of_order}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                       {customer?.company_name ?? "—"}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{site?.site_address ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{site?.site_address ?? "—"}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                       {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{TICKET_TYPE_LABELS[ticket.type]}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{TICKET_TYPE_LABELS[ticket.type]}</td>
                     <td className="px-4 py-3">
                       <TicketStatusBadge status={ticket.status} />
                     </td>
@@ -139,7 +139,7 @@ function TicketsContent() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
                     No tickets match this view.
                   </td>
                 </tr>
@@ -149,21 +149,21 @@ function TicketsContent() {
         </div>
 
         {/* Stacked card layout for phones — nothing to clip or scroll sideways to see. */}
-        <div className="divide-y divide-slate-100 sm:hidden">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 sm:hidden">
           {filtered.map((ticket) => {
             const { site, customer } = ticketCustomer(ticket, sites, customers);
             return (
               <button
                 key={ticket.id}
                 onClick={() => router.push(`/tickets/${ticket.id}`)}
-                className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-slate-50"
+                className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="font-medium text-slate-900">{customer?.company_name ?? "—"}</span>
+                  <span className="font-medium text-slate-900 dark:text-slate-100">{customer?.company_name ?? "—"}</span>
                   <TicketStatusBadge status={ticket.status} />
                 </div>
-                <div className="text-sm text-slate-600">{site?.site_address ?? "—"}</div>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+                <div className="text-sm text-slate-600 dark:text-slate-400">{site?.site_address ?? "—"}</div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
                   <span>{ticket.date_of_order}</span>
                   <span>
                     {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
@@ -175,7 +175,7 @@ function TicketsContent() {
             );
           })}
           {filtered.length === 0 && (
-            <div className="px-4 py-8 text-center text-slate-400">No tickets match this view.</div>
+            <div className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">No tickets match this view.</div>
           )}
         </div>
       </div>

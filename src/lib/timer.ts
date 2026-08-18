@@ -33,6 +33,32 @@ export function daysOnSite(ticket: Ticket, now: Date = new Date()): number | nul
   return Math.floor((now.getTime() - dropped.getTime()) / DAY_MS);
 }
 
+/** Whole days the box actually sat on site, drop to pickup — null unless both dates are set. */
+export function totalDaysOnSite(ticket: Ticket): number | null {
+  if (!ticket.drop_date || !ticket.pickup_date) return null;
+  const dropped = new Date(ticket.drop_date);
+  const pickedUp = new Date(ticket.pickup_date);
+  return Math.max(0, Math.round((pickedUp.getTime() - dropped.getTime()) / DAY_MS));
+}
+
+export type TurnaroundTag = "short" | "good" | "overtime";
+
+/**
+ * How a completed job's turnaround compares to its 14/30-day allowance:
+ * - "overtime": picked up after the allowance ran out
+ * - "short": picked up at or before half the allowance
+ * - "good": picked up within the allowance, past the halfway point
+ * Live loads have no allowance (timerLengthDays is null) so there's nothing to compare — null.
+ */
+export function classifyTurnaround(ticket: Ticket): TurnaroundTag | null {
+  const total = totalDaysOnSite(ticket);
+  const limit = timerLengthDays(ticket);
+  if (total === null || limit === null) return null;
+  if (total > limit) return "overtime";
+  if (total <= limit / 2) return "short";
+  return "good";
+}
+
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }

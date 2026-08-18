@@ -1,4 +1,4 @@
-import { Account, Customer, Driver, Dumpster, Site, Ticket } from "./types";
+import { Account, CompanyInfo, Customer, Driver, Dumpster, FeatureFlags, Site, Ticket } from "./types";
 
 function daysAgoISO(days: number): string {
   const d = new Date();
@@ -16,6 +16,22 @@ export const seedAccounts: Account[] = [
   { id: "acct-robert", name: "Robert", role: "admin" },
   { id: "acct-ava", name: "Ava", role: "dispatch" },
 ];
+
+export const defaultCompanyInfo: CompanyInfo = {
+  name: "Roll Off Tracker Pro",
+  address: "",
+  city: "",
+  state: "",
+  zip: "",
+  phone: "",
+  email: "",
+};
+
+export const defaultFeatureFlags: FeatureFlags = {
+  showCalendarTab: true,
+  showDaysOnSiteFilter: true,
+  requireDriverFromRoster: true,
+};
 
 export const seedCustomers: Customer[] = [
   {

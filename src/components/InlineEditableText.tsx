@@ -53,7 +53,7 @@ export function InlineEditableText({
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit();
         }}
         rows={3}
-        className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        className="w-full rounded-md border border-slate-400 dark:border-slate-600 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
       />
     );
   }
@@ -64,8 +64,8 @@ export function InlineEditableText({
       onClick={startEditing}
       disabled={!editable}
       className={`w-full rounded-md border border-transparent px-3 py-2 text-left text-sm ${
-        editable ? "cursor-text hover:border-slate-200 hover:bg-slate-50" : "cursor-default"
-      } ${value ? "text-slate-800" : "italic text-slate-400"}`}
+        editable ? "cursor-text hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800" : "cursor-default"
+      } ${value ? "text-slate-800 dark:text-slate-200" : "italic text-slate-400 dark:text-slate-500"}`}
       title={editable ? "Click to edit" : undefined}
     >
       {value || placeholder}

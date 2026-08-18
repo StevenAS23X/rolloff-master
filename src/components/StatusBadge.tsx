@@ -10,12 +10,12 @@ export const TICKET_LABELS: Record<TicketStatus, string> = {
 };
 
 const TICKET_STYLES: Record<TicketStatus, string> = {
-  draft: "bg-purple-100 text-purple-700 ring-purple-300",
-  "order-taken": "bg-slate-100 text-slate-700 ring-slate-300",
-  dropped: "bg-amber-100 text-amber-800 ring-amber-300",
-  "ready-to-invoice": "bg-blue-100 text-blue-800 ring-blue-300",
-  invoiced: "bg-emerald-100 text-emerald-800 ring-emerald-300",
-  archived: "bg-zinc-100 text-zinc-600 ring-zinc-300",
+  draft: "bg-purple-100 text-purple-700 ring-purple-300 dark:bg-purple-900/40 dark:text-purple-300 dark:ring-purple-700",
+  "order-taken": "bg-slate-100 text-slate-700 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600",
+  dropped: "bg-amber-100 text-amber-800 ring-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:ring-amber-700",
+  "ready-to-invoice": "bg-blue-100 text-blue-800 ring-blue-300 dark:bg-blue-900/40 dark:text-blue-300 dark:ring-blue-700",
+  invoiced: "bg-emerald-100 text-emerald-800 ring-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-700",
+  archived: "bg-zinc-100 text-zinc-600 ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-600",
 };
 
 export function TicketStatusBadge({ status }: { status: TicketStatus }) {
@@ -35,9 +35,9 @@ const DUMPSTER_LABELS: Record<DumpsterStatus, string> = {
 };
 
 const DUMPSTER_STYLES: Record<DumpsterStatus, string> = {
-  idle: "bg-emerald-100 text-emerald-800 ring-emerald-300",
-  "in-service": "bg-orange-100 text-orange-800 ring-orange-300",
-  "out-of-service": "bg-red-100 text-red-800 ring-red-300",
+  idle: "bg-emerald-100 text-emerald-800 ring-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-700",
+  "in-service": "bg-orange-100 text-orange-800 ring-orange-300 dark:bg-orange-900/40 dark:text-orange-300 dark:ring-orange-700",
+  "out-of-service": "bg-red-100 text-red-800 ring-red-300 dark:bg-red-900/40 dark:text-red-300 dark:ring-red-700",
 };
 
 export function DumpsterStatusBadge({ status }: { status: DumpsterStatus }) {

@@ -27,6 +27,8 @@ function DashboardContent() {
   const sites = useStore((s) => s.sites);
   const customers = useStore((s) => s.customers);
   const dumpsters = useStore((s) => s.dumpsters);
+  const showCalendarTab = useStore((s) => s.featureFlags.showCalendarTab);
+  const showDaysOnSiteFilter = useStore((s) => s.featureFlags.showDaysOnSiteFilter);
   const now = useOffsetNow();
   const [view, setView] = useState<"list" | "calendar">("list");
   const [query, setQuery] = useState("");
@@ -55,8 +57,8 @@ function DashboardContent() {
   }, [allTickets, sites, customers, query, sizeFilter]);
 
   const active = tickets.filter((t) => t.status !== "archived");
-  const min = minDaysOnSite.trim() === "" ? null : Number(minDaysOnSite);
-  const max = maxDaysOnSite.trim() === "" ? null : Number(maxDaysOnSite);
+  const min = !showDaysOnSiteFilter || minDaysOnSite.trim() === "" ? null : Number(minDaysOnSite);
+  const max = !showDaysOnSiteFilter || maxDaysOnSite.trim() === "" ? null : Number(maxDaysOnSite);
   const dropped = tickets
     .filter((t) => t.status === "dropped")
     .filter((t) => {
@@ -77,8 +79,8 @@ function DashboardContent() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dispatch Dashboard</h1>
-          <p className="text-sm text-slate-500">Live view of every open ticket and its timer.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dispatch Dashboard</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Live view of every open ticket and its timer.</p>
         </div>
         <Link
           href="/tickets/new"
@@ -88,21 +90,23 @@ function DashboardContent() {
         </Link>
       </div>
 
-      <div className="flex gap-1 rounded-lg border border-slate-200 bg-white p-1 w-fit">
-        {(["list", "calendar"] as const).map((v) => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
-              view === v ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            {v}
-          </button>
-        ))}
-      </div>
+      {showCalendarTab && (
+        <div className="flex gap-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 w-fit">
+          {(["list", "calendar"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors ${
+                view === v ? "bg-slate-900 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {view === "calendar" ? (
+      {view === "calendar" && showCalendarTab ? (
         <DispatchCalendar tickets={allTickets} sites={sites} customers={customers} now={now} />
       ) : (
         <>
@@ -112,12 +116,12 @@ function DashboardContent() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search box # or address..."
-            className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="min-w-[220px] flex-1 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm"
           />
           <select
             value={sizeFilter}
             onChange={(e) => setSizeFilter(e.target.value)}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+            className="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300"
           >
             <option value="all">All Sizes</option>
             {sizeOptions.map((size) => (
@@ -127,7 +131,7 @@ function DashboardContent() {
             ))}
           </select>
         </div>
-        <p className="text-xs text-slate-400">Search and size apply to every list on this page.</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">Search and size apply to every list on this page.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -144,47 +148,51 @@ function DashboardContent() {
       )}
 
       <Section title="Active Timers" subtitle="Sorted by days remaining — overdue first.">
-        <div className="mb-3 flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-500">Days on site — min</span>
-            <input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              value={minDaysOnSite}
-              onChange={(e) => setMinDaysOnSite(e.target.value)}
-              placeholder="e.g. 13"
-              className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-slate-500">Days on site — max</span>
-            <input
-              type="number"
-              min={0}
-              inputMode="numeric"
-              value={maxDaysOnSite}
-              onChange={(e) => setMaxDaysOnSite(e.target.value)}
-              placeholder="e.g. 13"
-              className="w-24 rounded-md border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
-          <span className="mb-2 text-xs text-slate-400">
-            Narrows this list only, by days since drop-off — leave blank for no limit, or set both to the same number for an exact match. Not the same as &quot;days left&quot; on the timer badge.
-          </span>
-          {(minDaysOnSite || maxDaysOnSite) && (
-            <button
-              type="button"
-              onClick={() => {
-                setMinDaysOnSite("");
-                setMaxDaysOnSite("");
-              }}
-              className="rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+        {showDaysOnSiteFilter && (
+          <div className="mb-3 flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Days on site — min</span>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={minDaysOnSite}
+                onChange={(e) => setMinDaysOnSite(e.target.value)}
+                placeholder="e.g. 13"
+                className="w-24 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Days on site — max</span>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={maxDaysOnSite}
+                onChange={(e) => setMaxDaysOnSite(e.target.value)}
+                placeholder="e.g. 13"
+                className="w-24 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm"
+              />
+            </label>
+            <span className="mb-2 text-xs text-slate-400 dark:text-slate-500">
+              Narrows this list only, by days since drop-off — leave blank for no limit, or set
+              both to the same number for an exact match. Not the same as &quot;days left&quot; on
+              the timer badge.
+            </span>
+            {(minDaysOnSite || maxDaysOnSite) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMinDaysOnSite("");
+                  setMaxDaysOnSite("");
+                }}
+                className="rounded-md px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
         {dropped.length === 0 ? (
           <EmptyRow
             text={
@@ -238,9 +246,9 @@ function StatTile({
   tone?: "default" | "danger";
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${tone === "danger" && value > 0 ? "text-red-600" : "text-slate-900"}`}>
+    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-bold ${tone === "danger" && value > 0 ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-slate-100"}`}>
         {value}
       </p>
     </div>
@@ -259,8 +267,8 @@ function Section({
   return (
     <div>
       <div className="mb-2">
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        <p className="text-sm text-slate-500">{subtitle}</p>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
       </div>
       {children}
     </div>
@@ -269,7 +277,7 @@ function Section({
 
 function EmptyRow({ text }: { text: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-400">
+    <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
       {text}
     </div>
   );
@@ -292,11 +300,11 @@ function TicketTable({
 }) {
   const router = useRouter();
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
       {/* Table layout for wider screens — a row of columns doesn't have room to wrap on a phone. */}
       <div className="hidden overflow-x-auto sm:block">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+          <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             <tr>
               <th className="px-4 py-2">Customer</th>
               <th className="px-4 py-2">Site</th>
@@ -306,27 +314,27 @@ function TicketTable({
               {showTimer && <th className="px-4 py-2">Timer</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {tickets.map((ticket) => {
               const { site, customer } = ticketCustomer(ticket, sites, customers);
               return (
                 <tr
                   key={ticket.id}
                   onClick={() => router.push(`/tickets/${ticket.id}`)}
-                  className="cursor-pointer hover:bg-slate-50"
+                  className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                     {customer?.company_name ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{site?.site_address ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{site?.site_address ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                     {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
                   </td>
                   <td className="px-4 py-3">
                     <TicketStatusBadge status={ticket.status} />
                   </td>
                   {showDaysOnSite && (
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                       {now && daysOnSite(ticket, now) !== null ? `${daysOnSite(ticket, now)}d` : "—"}
                     </td>
                   )}
@@ -343,21 +351,21 @@ function TicketTable({
       </div>
 
       {/* Stacked card layout for phones — nothing to clip or scroll sideways to see. */}
-      <div className="divide-y divide-slate-100 sm:hidden">
+      <div className="divide-y divide-slate-100 dark:divide-slate-800 sm:hidden">
         {tickets.map((ticket) => {
           const { site, customer } = ticketCustomer(ticket, sites, customers);
           return (
             <button
               key={ticket.id}
               onClick={() => router.push(`/tickets/${ticket.id}`)}
-              className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-slate-50"
+              className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-slate-900">{customer?.company_name ?? "—"}</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">{customer?.company_name ?? "—"}</span>
                 <TicketStatusBadge status={ticket.status} />
               </div>
-              <div className="text-sm text-slate-600">{site?.site_address ?? "—"}</div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+              <div className="text-sm text-slate-600 dark:text-slate-400">{site?.site_address ?? "—"}</div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
                 <span>
                   {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
                 </span>
@@ -393,8 +401,8 @@ const EVENT_DOT_COLOR: Record<CalendarEvent["type"], string> = {
 
 const EVENT_BADGE_STYLE: Record<CalendarEvent["type"], string> = {
   "requested-drop": "bg-sky-100 text-sky-800 ring-sky-300",
-  "pickup-due": "bg-amber-100 text-amber-800 ring-amber-300",
-  "picked-up": "bg-emerald-100 text-emerald-800 ring-emerald-300",
+  "pickup-due": "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 ring-amber-300 dark:ring-amber-700",
+  "picked-up": "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 ring-emerald-300 dark:ring-emerald-700",
 };
 
 function DispatchCalendar({
@@ -436,6 +444,15 @@ function DispatchCalendar({
     return map;
   }, [tickets]);
 
+  const yearOptions = useMemo(() => {
+    const years = new Set<number>();
+    const current = now.getFullYear();
+    for (let y = current - 3; y <= current + 3; y++) years.add(y);
+    years.add(viewMonth.getFullYear());
+    for (const dateKey of eventsByDate.keys()) years.add(Number(dateKey.slice(0, 4)));
+    return Array.from(years).sort((a, b) => a - b);
+  }, [now, viewMonth, eventsByDate]);
+
   const cells = monthGridCells(viewMonth);
   const selectedDateObj = parseISODateLocal(selectedDate);
   const selectedEvents = eventsByDate.get(selectedDate) ?? [];
@@ -470,7 +487,7 @@ function DispatchCalendar({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
           {(Object.keys(EVENT_LABEL) as CalendarEvent["type"][]).map((type) => (
             <span key={type} className="flex items-center gap-1.5">
               <span className={`h-2 w-2 rounded-full ${EVENT_DOT_COLOR[type]}`} />
@@ -481,34 +498,55 @@ function DispatchCalendar({
         <button
           type="button"
           onClick={handleExport}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
           title="Downloads a snapshot .ics file — open it in Calendar and choose 'Add All' to import. This is a one-time import, not a live-syncing subscription."
         >
           Export Calendar (.ics)
         </button>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
             onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}
-            className="rounded px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            className="rounded px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             ‹
           </button>
-          <span className="text-sm font-semibold text-slate-900">
-            {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <select
+              value={viewMonth.getMonth()}
+              onChange={(e) => setViewMonth(new Date(viewMonth.getFullYear(), Number(e.target.value), 1))}
+              className="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-1 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              {MONTH_LABELS.map((label, i) => (
+                <option key={label} value={i}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={viewMonth.getFullYear()}
+              onChange={(e) => setViewMonth(new Date(Number(e.target.value), viewMonth.getMonth(), 1))}
+              className="rounded-md border border-slate-200 dark:border-slate-800 px-2 py-1 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             type="button"
             onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}
-            className="rounded px-2 py-1 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            className="rounded px-2 py-1 text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             ›
           </button>
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400">
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-400 dark:text-slate-500">
           {["S", "M", "T", "W", "T", "F", "S"].map((w, i) => (
             <span key={i} className="py-1">
               {w}
@@ -532,8 +570,8 @@ function DispatchCalendar({
                   isSelected
                     ? "bg-slate-900 text-white"
                     : isToday
-                    ? "font-semibold text-slate-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-100"
-                    : "text-slate-700 hover:bg-slate-100"
+                    ? "font-semibold text-slate-900 dark:text-slate-100 ring-1 ring-inset ring-slate-300 dark:ring-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`}
               >
                 <span>{day.getDate()}</span>
@@ -548,25 +586,25 @@ function DispatchCalendar({
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-semibold text-slate-900">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
           {selectedDateObj ? formatDisplayDate(selectedDateObj) : selectedDate}
         </h3>
         {selectedEvents.length === 0 ? (
-          <p className="text-sm text-slate-400">Nothing scheduled this day.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Nothing scheduled this day.</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-slate-100">
+          <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
             {selectedEvents.map((ev, i) => {
               const { site, customer } = ticketCustomer(ev.ticket, sites, customers);
               return (
                 <li
                   key={i}
                   onClick={() => router.push(`/tickets/${ev.ticket.id}`)}
-                  className="flex cursor-pointer items-center justify-between gap-2 py-2 hover:bg-slate-50"
+                  className="flex cursor-pointer items-center justify-between gap-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{customer?.company_name ?? "—"}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{customer?.company_name ?? "—"}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {site?.site_address ?? "—"}
                       {ev.ticket.dumpster_id ? ` · #${ev.ticket.dumpster_id}` : ""}
                     </p>

@@ -20,19 +20,36 @@ export const metadata: Metadata = {
   description: "Dumpster roll-off ticket and timer tracking",
 };
 
+// Runs before paint, before hydration — sets the .dark class synchronously so there's no
+// flash of the wrong theme. Can't read localStorage on the server, so this has to be an
+// inline script rather than something computed in the component.
+const THEME_INIT_SCRIPT = `
+(function() {
+  try {
+    var stored = localStorage.getItem('rolloff-theme');
+    var isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) document.documentElement.classList.add('dark');
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <CrossTabSync />
         <Nav />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-        <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
+        <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400 dark:border-slate-800 dark:bg-slate-900">
           <p>Roll Off Tracker Pro — built by Serpent Software LLC</p>
-          <p className="mt-0.5 text-slate-300" title={BUILD_TIME ?? undefined}>
+          <p className="mt-0.5 text-slate-300 dark:text-slate-600" title={BUILD_TIME ?? undefined}>
             v{APP_VERSION} · {BUILD_SHA}
             {BUILD_TIME &&
               ` · built ${new Date(BUILD_TIME).toLocaleString(undefined, {

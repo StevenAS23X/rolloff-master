@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (instead of the default prefers-color-scheme media query) so the
+   toggle in the Nav can override the system setting. See src/components/ThemeToggle.tsx. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #f1f5f9;
 }
 
 @theme inline {

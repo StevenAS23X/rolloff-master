@@ -12,10 +12,33 @@ export type DumpsterStatus = "idle" | "in-service" | "out-of-service";
 
 export type Role = "admin" | "dispatch" | "driver";
 
+/** Extra capabilities a non-admin account can be granted beyond their role's defaults. */
+export interface AccountPermissions {
+  manageDumpsters: boolean;
+  viewArchived: boolean;
+}
+
 export interface Account {
   id: string;
   name: string;
   role: Role;
+  permissions?: Partial<AccountPermissions>;
+}
+
+export interface CompanyInfo {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone: string;
+  email: string;
+}
+
+export interface FeatureFlags {
+  showCalendarTab: boolean;
+  showDaysOnSiteFilter: boolean;
+  requireDriverFromRoster: boolean;
 }
 
 export interface Driver {
