@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { DumpsterIcon } from "@/components/DumpsterIcon";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ZoomControl } from "@/components/ZoomControl";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const LINKS = [
   { href: "/dashboard", label: "Dashboard", adminOnly: false, desktopOnly: false },
@@ -54,6 +56,8 @@ export function Nav() {
               </option>
             ))}
           </select>
+          {account?.role === "admin" && <NotificationBell />}
+          <ZoomControl />
           <ThemeToggle />
         </div>
 
@@ -64,7 +68,7 @@ export function Nav() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap rounded-md px-3.5 py-2 text-base font-bold transition-colors ${
                   link.desktopOnly ? "hidden md:inline-block" : ""
                 } ${
                   active

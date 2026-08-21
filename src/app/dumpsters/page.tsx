@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { DumpsterStatusBadge } from "@/components/StatusBadge";
@@ -123,13 +124,8 @@ function DumpstersContent() {
                           Open →
                         </Link>
                       )}
-                      {!ticket && canManage && d.status === "idle" && (
-                        <button
-                          onClick={() => updateDumpster(d.id, { status: "out-of-service" })}
-                          className="font-medium text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:underline"
-                        >
-                          Mark Out of Service
-                        </button>
+                      {d.status !== "out-of-service" && account && (
+                        <MarkOutOfServiceButton dumpsterId={d.id} accountName={account.name} />
                       )}
                       {!ticket && canManage && d.status === "out-of-service" && (
                         <button
@@ -188,13 +184,8 @@ function DumpstersContent() {
                       Open →
                     </Link>
                   )}
-                  {!ticket && canManage && d.status === "idle" && (
-                    <button
-                      onClick={() => updateDumpster(d.id, { status: "out-of-service" })}
-                      className="font-medium text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:underline"
-                    >
-                      Mark Out of Service
-                    </button>
+                  {d.status !== "out-of-service" && account && (
+                    <MarkOutOfServiceButton dumpsterId={d.id} accountName={account.name} />
                   )}
                   {!ticket && canManage && d.status === "out-of-service" && (
                     <button
@@ -214,5 +205,66 @@ function DumpstersContent() {
         </div>
       </div>
     </div>
+  );
+}
+
+function MarkOutOfServiceButton({ dumpsterId, accountName }: { dumpsterId: string; accountName: string }) {
+  const markDumpsterOutOfService = useStore((s) => s.markDumpsterOutOfService);
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  function handleConfirm() {
+    markDumpsterOutOfService(dumpsterId, reason.trim(), accountName);
+    setOpen(false);
+    setReason("");
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="font-medium text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:underline"
+      >
+        Mark Out of Service
+      </button>
+      {open &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-sm rounded-lg bg-white dark:bg-slate-900 p-5 shadow-xl">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                Mark box #{dumpsterId} out of service
+              </h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                Admins get notified. Add a reason so they know what to look at.
+              </p>
+              <textarea
+                autoFocus
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="e.g. Door hinge broke off"
+                rows={3}
+                className="mt-3 w-full rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Mark Out of Service
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }

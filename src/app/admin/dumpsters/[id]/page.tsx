@@ -26,6 +26,7 @@ function AdminDumpsterEditContent() {
 
   const dumpster = dumpsters.find((d) => d.id === params.id);
   const [noteText, setNoteText] = useState("");
+  const [noteQuery, setNoteQuery] = useState("");
 
   if (account?.role !== "admin") {
     return (
@@ -57,6 +58,10 @@ function AdminDumpsterEditContent() {
 
   const history = dumpster.status_history.slice().sort((a, b) => (a.since < b.since ? 1 : -1));
   const notes = dumpster.service_notes.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const noteQueryTrimmed = noteQuery.trim().toLowerCase();
+  const filteredNotes = !noteQueryTrimmed
+    ? notes
+    : notes.filter((n) => `${n.note} ${n.createdBy}`.toLowerCase().includes(noteQueryTrimmed));
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -104,14 +109,26 @@ function AdminDumpsterEditContent() {
       </div>
 
       <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Service Record ({notes.length})
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Service Record ({notes.length})
+          </h2>
+          {notes.length > 0 && (
+            <input
+              value={noteQuery}
+              onChange={(e) => setNoteQuery(e.target.value)}
+              placeholder="Search notes..."
+              className="w-48 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm"
+            />
+          )}
+        </div>
         {notes.length === 0 ? (
           <p className="mb-3 text-sm text-slate-400 dark:text-slate-500">No service notes logged yet.</p>
+        ) : filteredNotes.length === 0 ? (
+          <p className="mb-3 text-sm text-slate-400 dark:text-slate-500">No notes match that search.</p>
         ) : (
           <ul className="mb-3 flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            {notes.map((n) => (
+            {filteredNotes.map((n) => (
               <li key={n.id} className="py-2">
                 <p className="text-sm text-slate-800 dark:text-slate-200">{n.note}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500">

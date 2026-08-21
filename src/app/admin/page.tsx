@@ -444,70 +444,70 @@ function CustomersTable() {
                   <input
                     value={c.company_name}
                     onChange={(e) => updateCustomerFields(c.id, { company_name: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[210px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.contact_name}
                     onChange={(e) => updateCustomerFields(c.id, { contact_name: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[140px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.phone}
                     onChange={(e) => updateCustomerFields(c.id, { phone: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[130px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.email}
                     onChange={(e) => updateCustomerFields(c.id, { email: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[230px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.address}
                     onChange={(e) => updateCustomerFields(c.id, { address: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[200px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.address_line2}
                     onChange={(e) => updateCustomerFields(c.id, { address_line2: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[120px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.address_line3}
                     onChange={(e) => updateCustomerFields(c.id, { address_line3: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[120px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.city}
                     onChange={(e) => updateCustomerFields(c.id, { city: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[110px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.state}
                     onChange={(e) => updateCustomerFields(c.id, { state: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[70px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5">
                   <input
                     value={c.zip}
                     onChange={(e) => updateCustomerFields(c.id, { zip: e.target.value })}
-                    className={cellInput}
+                    className={`${cellInput} min-w-[90px]`}
                   />
                 </td>
                 <td className="px-4 py-1.5 text-right">
@@ -664,6 +664,7 @@ const FEATURE_FLAG_INFO: { key: keyof FeatureFlags; label: string; description: 
 const PERMISSION_INFO: { key: keyof AccountPermissions; label: string }[] = [
   { key: "manageDumpsters", label: "Manage Dumpsters" },
   { key: "viewArchived", label: "View Archived Tickets" },
+  { key: "editTickets", label: "Edit Tickets" },
 ];
 
 function CompanySettingsPanel() {

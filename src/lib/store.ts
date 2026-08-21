@@ -11,6 +11,8 @@ import {
   Dumpster,
   DumpsterStatus,
   FeatureFlags,
+  LiveLoad,
+  NotificationEntry,
   Site,
   Ticket,
 } from "./types";
@@ -91,6 +93,7 @@ export interface NewTicketInput {
   material: string;
   notes: string;
   type: Ticket["type"];
+  live_load_count: string;
 }
 
 interface RolloffState {
@@ -102,6 +105,7 @@ interface RolloffState {
   dumpsters: Dumpster[];
   drivers: Driver[];
   changeLog: ChangeLogEntry[];
+  notifications: NotificationEntry[];
   hasHydrated: boolean;
   timeOffsetMs: number;
   companyInfo: CompanyInfo;
@@ -114,12 +118,19 @@ interface RolloffState {
   finalizeTicketDraft: (ticketId: string) => void;
   dropTicket: (
     ticketId: string,
-    data: { dumpster_id: string; drop_description: string; dropped_by_driver: string; drop_date: string }
+    data: {
+      dumpster_id: string;
+      drop_description: string;
+      dropped_by_driver: string;
+      drop_date: string;
+      drop_condition_notes: string;
+    }
   ) => void;
   pickUpTicket: (
     ticketId: string,
-    data: { pickup_date: string; picked_up_by_driver: string }
+    data: { pickup_date: string; picked_up_by_driver: string; pickup_condition_notes: string }
   ) => void;
+  completeLiveLoad: (ticketId: string, data: { loads: LiveLoad[]; drivers: string[] }) => void;
   invoiceTicket: (
     ticketId: string,
     data: { invoice_number: string; invoiceable_amount: string }
@@ -128,17 +139,22 @@ interface RolloffState {
   updateDumpster: (id: string, patch: Partial<Dumpster>) => void;
   removeDumpster: (id: string) => void;
   addDumpsterServiceNote: (id: string, note: string, createdBy: string) => void;
+  markDumpsterOutOfService: (id: string, reason: string, changedBy: string) => void;
   addDriver: (driver: { name: string; phone: string }) => void;
   updateDriver: (id: string, patch: Partial<Driver>) => void;
   removeDriver: (id: string) => void;
   updateTicketFields: (id: string, patch: Partial<Ticket>) => void;
-  adminUpdateTicket: (id: string, patch: Partial<Ticket>, changedBy: string) => void;
+  updateTicketWithLog: (id: string, patch: Partial<Ticket>, changedBy: string) => void;
+  addTicketFee: (ticketId: string, fee: { description: string; amount: number }, addedBy: string) => void;
+  removeTicketFee: (ticketId: string, feeId: string) => void;
   updateCustomerFields: (id: string, patch: Partial<Customer>) => void;
   mergeCustomers: (keepId: string, mergeId: string, changedBy: string) => void;
   reassignTicketCustomer: (ticketId: string, targetCustomerId: string, changedBy: string) => void;
   updateCompanyInfo: (patch: Partial<CompanyInfo>) => void;
   setFeatureFlag: (key: keyof FeatureFlags, value: boolean) => void;
   updateAccountPermissions: (accountId: string, patch: Partial<AccountPermissions>) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
 }
 
 export const useStore = create<RolloffState>()(
@@ -152,6 +168,7 @@ export const useStore = create<RolloffState>()(
       dumpsters: seedDumpsters,
       drivers: seedDrivers,
       changeLog: [],
+      notifications: [],
       hasHydrated: false,
       timeOffsetMs: 0,
       companyInfo: defaultCompanyInfo,
@@ -293,6 +310,7 @@ export const useStore = create<RolloffState>()(
             material: input.material,
             notes: input.notes,
             requested_drop_date: input.requested_drop_date,
+            live_load_count: input.live_load_count,
           };
           tickets = state.tickets.map((t) => (t.id === existingTicket.id ? ticket : t));
         } else {
@@ -310,11 +328,17 @@ export const useStore = create<RolloffState>()(
             drop_date: null,
             drop_description: "",
             dropped_by_driver: "",
+            drop_condition_notes: "",
             pickup_date: null,
             picked_up_by_driver: "",
+            pickup_condition_notes: "",
             invoiced: false,
             invoice_number: "",
             invoiceable_amount: "",
+            additionalFees: [],
+            live_load_count: input.live_load_count,
+            loads: [],
+            live_load_drivers: [],
           };
           tickets = [...tickets, ticket];
         }
@@ -342,6 +366,7 @@ export const useStore = create<RolloffState>()(
                   drop_description: data.drop_description,
                   dropped_by_driver: data.dropped_by_driver,
                   drop_date: data.drop_date,
+                  drop_condition_notes: data.drop_condition_notes,
                 }
               : t
           ),
@@ -359,6 +384,23 @@ export const useStore = create<RolloffState>()(
                   status: "ready-to-invoice",
                   pickup_date: data.pickup_date,
                   picked_up_by_driver: data.picked_up_by_driver,
+                  pickup_condition_notes: data.pickup_condition_notes,
+                }
+              : t
+          ),
+        });
+      },
+
+      completeLiveLoad: (ticketId, data) => {
+        const state = get();
+        set({
+          tickets: state.tickets.map((t) =>
+            t.id === ticketId
+              ? {
+                  ...t,
+                  status: "ready-to-invoice",
+                  loads: data.loads,
+                  live_load_drivers: data.drivers,
                 }
               : t
           ),
@@ -433,6 +475,35 @@ export const useStore = create<RolloffState>()(
         });
       },
 
+      markDumpsterOutOfService: (id, reason, changedBy) => {
+        const state = get();
+        const trimmedReason = reason.trim();
+        const dumpsters = withDumpsterStatus(state.dumpsters, id, "out-of-service").map((d) =>
+          d.id === id && trimmedReason
+            ? {
+                ...d,
+                service_notes: [
+                  ...d.service_notes,
+                  { id: newId("svc"), note: trimmedReason, createdAt: new Date().toISOString(), createdBy: changedBy },
+                ],
+              }
+            : d
+        );
+        set({
+          dumpsters,
+          notifications: [
+            {
+              id: newId("notif"),
+              message: `${changedBy} marked box #${id} out of service${trimmedReason ? `: ${trimmedReason}` : "."}`,
+              createdAt: new Date().toISOString(),
+              read: false,
+              dumpsterId: id,
+            },
+            ...state.notifications,
+          ],
+        });
+      },
+
       addDriver: (driver) => {
         const state = get();
         set({
@@ -459,7 +530,7 @@ export const useStore = create<RolloffState>()(
         });
       },
 
-      adminUpdateTicket: (id, patch, changedBy) => {
+      updateTicketWithLog: (id, patch, changedBy) => {
         const state = get();
         const ticket = state.tickets.find((t) => t.id === id);
         if (!ticket) return;
@@ -473,6 +544,38 @@ export const useStore = create<RolloffState>()(
         set({
           tickets: state.tickets.map((t) => (t.id === id ? { ...t, ...patch } : t)),
           changeLog: entries.length > 0 ? [...entries, ...state.changeLog] : state.changeLog,
+        });
+      },
+
+      addTicketFee: (ticketId, fee, addedBy) => {
+        const state = get();
+        set({
+          tickets: state.tickets.map((t) =>
+            t.id === ticketId
+              ? {
+                  ...t,
+                  additionalFees: [
+                    ...t.additionalFees,
+                    {
+                      id: newId("fee"),
+                      description: fee.description,
+                      amount: fee.amount,
+                      addedBy,
+                      createdAt: new Date().toISOString(),
+                    },
+                  ],
+                }
+              : t
+          ),
+        });
+      },
+
+      removeTicketFee: (ticketId, feeId) => {
+        const state = get();
+        set({
+          tickets: state.tickets.map((t) =>
+            t.id === ticketId ? { ...t, additionalFees: t.additionalFees.filter((f) => f.id !== feeId) } : t
+          ),
         });
       },
 
@@ -560,10 +663,22 @@ export const useStore = create<RolloffState>()(
           ),
         });
       },
+
+      markNotificationRead: (id) => {
+        const state = get();
+        set({
+          notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        });
+      },
+
+      markAllNotificationsRead: () => {
+        const state = get();
+        set({ notifications: state.notifications.map((n) => ({ ...n, read: true })) });
+      },
     }),
     {
       name: "rolloff-data",
-      version: 6,
+      version: 7,
       migrate: (persistedState) => {
         const state = persistedState as Partial<RolloffState>;
         if (Array.isArray(state.dumpsters)) {
@@ -609,6 +724,21 @@ export const useStore = create<RolloffState>()(
           state.featureFlags = defaultFeatureFlags;
         } else {
           state.featureFlags = { ...defaultFeatureFlags, ...state.featureFlags };
+        }
+        if (!Array.isArray(state.notifications)) state.notifications = [];
+        if (Array.isArray(state.tickets)) {
+          state.tickets = state.tickets.map((t) => {
+            const raw = t as Partial<Ticket>;
+            return {
+              ...t,
+              drop_condition_notes: raw.drop_condition_notes ?? "",
+              pickup_condition_notes: raw.pickup_condition_notes ?? "",
+              additionalFees: Array.isArray(raw.additionalFees) ? raw.additionalFees : [],
+              live_load_count: raw.live_load_count ?? "",
+              loads: Array.isArray(raw.loads) ? raw.loads : [],
+              live_load_drivers: Array.isArray(raw.live_load_drivers) ? raw.live_load_drivers : [],
+            };
+          });
         }
         return state;
       },

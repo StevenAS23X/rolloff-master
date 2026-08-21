@@ -8,6 +8,7 @@ import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { ticketCustomer } from "@/lib/selectors";
 import { TICKET_TYPE_LABELS } from "@/lib/ticketType";
+import { TICKET_FIELD_LABELS } from "@/lib/ticketFields";
 import { Customer, Ticket, TicketStatus, TicketType } from "@/lib/types";
 
 const STATUS_OPTIONS: TicketStatus[] = [
@@ -20,25 +21,6 @@ const STATUS_OPTIONS: TicketStatus[] = [
 ];
 
 const TYPE_OPTIONS: TicketType[] = ["residential", "commercial", "live-load"];
-
-const FIELD_LABELS: Record<string, string> = {
-  date_of_order: "Date of Order",
-  type: "Type",
-  box_size: "Box Size",
-  material: "Material",
-  notes: "Notes",
-  requested_drop_date: "Requested Drop Date",
-  dumpster_id: "Box Number",
-  status: "Status",
-  drop_date: "Drop Date",
-  drop_description: "Drop Description",
-  dropped_by_driver: "Dropped By",
-  pickup_date: "Pickup Date",
-  picked_up_by_driver: "Picked Up By",
-  invoiced: "Invoiced",
-  invoice_number: "Invoice Number",
-  invoiceable_amount: "Invoiceable Amount",
-};
 
 export default function AdminTicketEditPage() {
   return (
@@ -57,7 +39,7 @@ function AdminTicketEditContent() {
   const customers = useStore((s) => s.customers);
   const dumpsters = useStore((s) => s.dumpsters);
   const changeLog = useStore((s) => s.changeLog);
-  const adminUpdateTicket = useStore((s) => s.adminUpdateTicket);
+  const updateTicketWithLog = useStore((s) => s.updateTicketWithLog);
 
   const ticket = tickets.find((t) => t.id === params.id);
   const [form, setForm] = useState<Ticket | null>(ticket ?? null);
@@ -93,7 +75,7 @@ function AdminTicketEditContent() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form || !account) return;
-    adminUpdateTicket(ticketId, form, account.name);
+    updateTicketWithLog(ticketId, form, account.name);
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 2000);
   }
@@ -308,7 +290,7 @@ function AdminTicketEditContent() {
               .sort((a, b) => (a.changedAt < b.changedAt ? 1 : -1))
               .map((entry) => (
                 <li key={entry.id} className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="font-medium">{FIELD_LABELS[entry.field] ?? entry.field}</span>{" "}
+                  <span className="font-medium">{TICKET_FIELD_LABELS[entry.field] ?? entry.field}</span>{" "}
                   changed from <span className="text-slate-500 dark:text-slate-400">&quot;{entry.oldValue || "—"}&quot;</span>{" "}
                   to <span className="text-slate-900 dark:text-slate-100">&quot;{entry.newValue || "—"}&quot;</span>
                   <span className="text-slate-400 dark:text-slate-500">

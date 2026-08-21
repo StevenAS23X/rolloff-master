@@ -7,7 +7,7 @@ import { useStore, useOffsetNow } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
 import { TimerBadge } from "@/components/TimerBadge";
-import { daysOnSite, daysRemaining, timerDueDate } from "@/lib/timer";
+import { daysOnSite, daysRemaining, timerDueDate, todayISO } from "@/lib/timer";
 import { ticketCustomer } from "@/lib/selectors";
 import { Customer, Site, Ticket } from "@/lib/types";
 import { TimeAccelerator } from "@/components/TimeAccelerator";
@@ -74,9 +74,14 @@ function DashboardContent() {
   const drafts = tickets.filter((t) => t.status === "draft");
   const orderTaken = tickets.filter((t) => t.status === "order-taken");
   const readyToInvoice = tickets.filter((t) => t.status === "ready-to-invoice");
+  const activeLiveLoads = allTickets.filter(
+    (t) => t.type === "live-load" && t.status === "order-taken" && t.requested_drop_date === todayISO()
+  );
 
   return (
     <div className="flex flex-col gap-8">
+      {activeLiveLoads.length > 0 && <ActiveLiveLoadsBanner tickets={activeLiveLoads} sites={sites} customers={customers} />}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dispatch Dashboard</h1>
@@ -236,6 +241,45 @@ function DashboardContent() {
   );
 }
 
+function ActiveLiveLoadsBanner({
+  tickets,
+  sites,
+  customers,
+}: {
+  tickets: Ticket[];
+  sites: Site[];
+  customers: Customer[];
+}) {
+  const router = useRouter();
+  return (
+    <div className="rounded-lg border-2 border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-950/30 p-4">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-sky-700 dark:text-sky-400">
+        Live Load In Progress
+      </p>
+      <div className="flex flex-col gap-2">
+        {tickets.map((ticket) => {
+          const { site, customer } = ticketCustomer(ticket, sites, customers);
+          return (
+            <button
+              key={ticket.id}
+              onClick={() => router.push(`/tickets/${ticket.id}`)}
+              className="flex w-full flex-wrap items-center justify-between gap-2 rounded-md bg-white dark:bg-slate-900 px-3 py-2 text-left shadow-sm hover:bg-sky-100/60 dark:hover:bg-sky-900/30"
+            >
+              <span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">{customer?.company_name ?? "—"}</span>{" "}
+                <span className="text-slate-500 dark:text-slate-400">— {site?.site_address ?? "—"}</span>
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {ticket.live_load_count ? `~${ticket.live_load_count} loads` : "Loads TBD"} · Open →
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function StatTile({
   label,
   value,
@@ -317,11 +361,17 @@ function TicketTable({
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {tickets.map((ticket) => {
               const { site, customer } = ticketCustomer(ticket, sites, customers);
+              const hasFees = ticket.additionalFees.length > 0;
               return (
                 <tr
                   key={ticket.id}
                   onClick={() => router.push(`/tickets/${ticket.id}`)}
-                  className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className={`cursor-pointer ${
+                    hasFees
+                      ? "bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/30 dark:hover:bg-pink-900/30"
+                      : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+                  title={hasFees ? "This ticket has additional fees" : undefined}
                 >
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                     {customer?.company_name ?? "—"}
@@ -329,6 +379,11 @@ function TicketTable({
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{site?.site_address ?? "—"}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
                     {ticket.dumpster_id ? `#${ticket.dumpster_id}` : "—"} · {ticket.box_size}yd
+                    {hasFees && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-pink-200 dark:bg-pink-900/50 px-2 py-0.5 text-xs font-medium text-pink-800 dark:text-pink-300">
+                        + Fees
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <TicketStatusBadge status={ticket.status} />
@@ -354,11 +409,16 @@ function TicketTable({
       <div className="divide-y divide-slate-100 dark:divide-slate-800 sm:hidden">
         {tickets.map((ticket) => {
           const { site, customer } = ticketCustomer(ticket, sites, customers);
+          const hasFees = ticket.additionalFees.length > 0;
           return (
             <button
               key={ticket.id}
               onClick={() => router.push(`/tickets/${ticket.id}`)}
-              className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800"
+              className={`flex w-full flex-col gap-1.5 px-4 py-3 text-left ${
+                hasFees
+                  ? "bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/30 dark:hover:bg-pink-900/30"
+                  : "hover:bg-slate-50 dark:hover:bg-slate-800"
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="font-medium text-slate-900 dark:text-slate-100">{customer?.company_name ?? "—"}</span>
@@ -373,6 +433,11 @@ function TicketTable({
                   <span>{daysOnSite(ticket, now)}d on site</span>
                 )}
                 {showTimer && <TimerBadge ticket={ticket} />}
+                {hasFees && (
+                  <span className="inline-flex items-center rounded-full bg-pink-200 dark:bg-pink-900/50 px-2 py-0.5 text-xs font-medium text-pink-800 dark:text-pink-300">
+                    + Fees
+                  </span>
+                )}
               </div>
             </button>
           );
