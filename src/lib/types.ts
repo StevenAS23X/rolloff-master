@@ -16,6 +16,7 @@ export type Role = "admin" | "dispatch" | "driver";
 export interface AccountPermissions {
   manageDumpsters: boolean;
   viewArchived: boolean;
+  editTickets: boolean;
 }
 
 export interface Account {
@@ -75,6 +76,22 @@ export interface Site {
   site_contact_phone: string;
 }
 
+export interface AdditionalFee {
+  id: string;
+  description: string;
+  amount: number; // dollars; negative = a deduction
+  addedBy: string;
+  createdAt: string; // ISO timestamp
+}
+
+/** One truckload of a live-load job — only the size is required, the rest can be filled in later. */
+export interface LiveLoad {
+  id: string;
+  dumpster_id: string; // free-text box number, optional
+  size_yards: string;
+  material: string;
+}
+
 export interface Ticket {
   id: string;
   site_id: string;
@@ -89,11 +106,20 @@ export interface Ticket {
   drop_date: string | null;
   drop_description: string;
   dropped_by_driver: string;
+  drop_condition_notes: string;
   pickup_date: string | null;
   picked_up_by_driver: string;
+  pickup_condition_notes: string;
   invoiced: boolean;
   invoice_number: string;
   invoiceable_amount: string;
+  additionalFees: AdditionalFee[];
+  /** Live-load only: rough estimate of loads, captured at order-taken time. */
+  live_load_count: string;
+  /** Live-load only: the actual loads, captured when the job is completed. */
+  loads: LiveLoad[];
+  /** Live-load only: everyone who drove a load, roster or contracted. */
+  live_load_drivers: string[];
 }
 
 export interface DumpsterStatusEntry {
@@ -125,4 +151,12 @@ export interface ChangeLogEntry {
   newValue: string;
   changedBy: string;
   changedAt: string; // ISO timestamp
+}
+
+export interface NotificationEntry {
+  id: string;
+  message: string;
+  createdAt: string; // ISO timestamp
+  read: boolean;
+  dumpsterId?: string;
 }

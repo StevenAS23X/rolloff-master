@@ -33,6 +33,19 @@ const THEME_INIT_SCRIPT = `
 })();
 `;
 
+// Same idea as THEME_INIT_SCRIPT, for the text-size zoom slider — sets the root font-size
+// before paint so there's no jump once React mounts. See src/components/ZoomControl.tsx.
+const ZOOM_INIT_SCRIPT = `
+(function() {
+  try {
+    var pct = parseInt(localStorage.getItem('rolloff-zoom'), 10);
+    if (pct && pct !== 100 && pct >= 90 && pct <= 150) {
+      document.documentElement.style.fontSize = (pct / 100 * 16) + 'px';
+    }
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -42,6 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: ZOOM_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <CrossTabSync />

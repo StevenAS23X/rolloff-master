@@ -39,6 +39,7 @@ const emptyForm: NewTicketInput = {
   material: "",
   notes: "",
   type: "residential",
+  live_load_count: "",
 };
 
 function minRequestedDropDate(dateOfOrder: string): string {
@@ -85,6 +86,7 @@ function buildDraftForm(
     material: ticket.material,
     notes: ticket.notes,
     type: ticket.type,
+    live_load_count: ticket.live_load_count,
   };
 }
 
@@ -229,7 +231,7 @@ function NewTicketForm() {
               className={inputClass}
             />
           </Field>
-          <Field label="Requested Drop Date">
+          <Field label={form.type === "live-load" ? "Date of Live Load" : "Requested Drop Date"}>
             <DatePicker
               required
               value={form.requested_drop_date}
@@ -489,34 +491,49 @@ function NewTicketForm() {
         </FormSection>
 
         <FormSection title="Details">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Box Size (yards)">
-              <select
-                required
-                value={form.box_size}
-                onChange={(e) => update("box_size", e.target.value)}
-                className={inputClass}
-              >
-                <option value="" disabled>
-                  Select a size...
-                </option>
-                {boxSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size} yd
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Material">
+          {form.type === "live-load" ? (
+            <Field label="Number of Loads (estimate)">
               <input
                 required
-                value={form.material}
-                onChange={(e) => update("material", e.target.value)}
-                placeholder="e.g. Construction debris"
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={form.live_load_count}
+                onChange={(e) => update("live_load_count", e.target.value)}
+                placeholder="e.g. 3"
                 className={inputClass}
               />
             </Field>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Box Size (yards)">
+                <select
+                  required
+                  value={form.box_size}
+                  onChange={(e) => update("box_size", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="" disabled>
+                    Select a size...
+                  </option>
+                  {boxSizeOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {size} yd
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Material">
+                <input
+                  required
+                  value={form.material}
+                  onChange={(e) => update("material", e.target.value)}
+                  placeholder="e.g. Construction debris"
+                  className={inputClass}
+                />
+              </Field>
+            </div>
+          )}
           <Field label="Notes">
             <textarea
               value={form.notes}

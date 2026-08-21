@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 import { useStore, useCurrentAccount } from "@/lib/store";
 import { Hydrated } from "@/components/Hydrated";
 import { TicketStatusBadge } from "@/components/StatusBadge";
@@ -26,6 +27,7 @@ function CustomerDetailContent() {
   const tickets = useStore((s) => s.tickets);
   const account = useCurrentAccount();
   const canViewArchived = hasPermission(account, "viewArchived");
+  const [query, setQuery] = useState("");
 
   const customer = customers.find((c) => c.id === params.id);
 
@@ -40,9 +42,19 @@ function CustomerDetailContent() {
     );
   }
 
-  const jobs = ticketsForCustomer(tickets, sites, customer.id).sort((a, b) =>
+  const allJobs = ticketsForCustomer(tickets, sites, customer.id).sort((a, b) =>
     a.date_of_order < b.date_of_order ? 1 : -1
   );
+  const q = query.trim().toLowerCase().replace(/#/g, "");
+  const jobs = !q
+    ? allJobs
+    : allJobs.filter((t) => {
+        const site = getSite(sites, t.site_id);
+        const haystack = `${site?.site_address ?? ""} ${site?.site_contact_name ?? ""} ${
+          t.dumpster_id ?? ""
+        } ${t.status}`.toLowerCase();
+        return haystack.includes(q);
+      });
   const currentJobs = jobs.filter((t) => t.status !== "archived");
   const pastJobs = canViewArchived ? jobs.filter((t) => t.status === "archived") : [];
 
@@ -78,10 +90,19 @@ function CustomerDetailContent() {
         </dl>
       </InfoCard>
 
+      {allJobs.length > 0 && (
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search site address, contact, box #..."
+          className="rounded-md border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm"
+        />
+      )}
+
       <div>
         <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-slate-100">Current Jobs</h2>
         {currentJobs.length === 0 ? (
-          <EmptyRow text="No active jobs for this customer." />
+          <EmptyRow text={q ? "No jobs match that search." : "No active jobs for this customer."} />
         ) : (
           <JobsTable jobs={currentJobs} sites={sites} showTimer />
         )}

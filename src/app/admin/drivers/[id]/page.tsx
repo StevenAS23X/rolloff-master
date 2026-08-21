@@ -30,6 +30,7 @@ function AdminDriverEditContent() {
   const [name, setName] = useState(driver?.name ?? "");
   const [phone, setPhone] = useState(driver?.phone ?? "");
   const [savedFlash, setSavedFlash] = useState(false);
+  const [historyQuery, setHistoryQuery] = useState("");
 
   if (account?.role !== "admin") {
     return (
@@ -52,6 +53,16 @@ function AdminDriverEditContent() {
 
   const driverId = driver.id;
   const events = driverEvents(tickets, driver.name);
+  const historyQueryTrimmed = historyQuery.trim().toLowerCase().replace(/#/g, "");
+  const filteredEvents = !historyQueryTrimmed
+    ? events
+    : events.filter((ev) => {
+        const { site, customer } = ticketCustomer(ev.ticket, sites, customers);
+        const haystack = `${customer?.company_name ?? ""} ${site?.site_address ?? ""} ${
+          ev.ticket.dumpster_id ?? ""
+        } ${ev.action} ${ev.date}`.toLowerCase();
+        return haystack.includes(historyQueryTrimmed);
+      });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -127,14 +138,26 @@ function AdminDriverEditContent() {
       </form>
 
       <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Box History ({events.length})
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Box History ({events.length})
+          </h2>
+          {events.length > 0 && (
+            <input
+              value={historyQuery}
+              onChange={(e) => setHistoryQuery(e.target.value)}
+              placeholder="Search customer, address, box #..."
+              className="w-56 rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm"
+            />
+          )}
+        </div>
         {events.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">No drop-offs or pickups logged for this driver yet.</p>
+        ) : filteredEvents.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500">No history matches that search.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-            {events.map((ev, i) => {
+            {filteredEvents.map((ev, i) => {
               const { site, customer } = ticketCustomer(ev.ticket, sites, customers);
               return (
                 <li key={`${ev.ticket.id}-${ev.action}-${i}`} className="flex flex-col gap-1 py-3">
